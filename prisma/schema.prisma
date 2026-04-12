@@ -1,0 +1,658 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================
+// CORE USER MODELS
+// ============================
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  phone           String?   @unique
+  passwordHash    String?
+  name            String
+  role            UserRole  @default(CLIENT)
+  avatar          String?
+  emailVerified   Boolean   @default(false)
+  phoneVerified   Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  clientProfile     ClientProfile?
+  specialistProfile SpecialistProfile?
+  orders            Order[]
+  subscriptions     Subscription[]
+  chatSessions      ChatSession[]
+  notifications     Notification[]
+  sessions          Session[]
+  assessments       Assessment[]
+  cartItems         CartItem[]
+}
+
+enum UserRole {
+  CLIENT
+  SPECIALIST
+  ADMIN
+  SUPER_ADMIN
+  CONTENT_ADMIN
+  MARKETPLACE_ADMIN
+  CRM_ADMIN
+  FINANCE_ADMIN
+}
+
+model ClientProfile {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id])
+  companyName          String
+  gstin                String?
+  gstinVerified        Boolean   @default(false)
+  businessType         String
+  sector               String
+  subSector            String?
+  revenueRange         String
+  employeeRange        String
+  city                 String
+  state                String
+  yearsInBusiness      Int?
+  challenges           String[]
+  priorities           String[]
+  consultingExperience String?
+  preferredLanguage    String    @default("en")
+  commChannel          String    @default("email")
+  referralSource       String?
+  onboardingComplete   Boolean   @default(false)
+  diagnosticResults    Json?
+  leadScore            Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  assignments    Assignment[]
+  frameworkAccess FrameworkAccess[]
+  teamMembers    TeamMember[]
+}
+
+model TeamMember {
+  id              String        @id @default(cuid())
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+  userId          String
+  role            String
+  addedAt         DateTime      @default(now())
+}
+
+model SpecialistProfile {
+  id                  String           @id @default(cuid())
+  userId              String           @unique
+  user                User             @relation(fields: [userId], references: [id])
+  headline            String?
+  bio                 String?
+  linkedinUrl         String
+  currentRole         String
+  organisation        String?
+  experienceYears     String
+  education           Json
+  certifications      Json[]
+  serviceDomains      String[]
+  sectorExpertise     String[]
+  challengesAddressed String[]
+  languages           String[]
+  engagementTypes     String[]
+  hourlyRateMin       Int?
+  hourlyRateMax       Int?
+  availability        String
+  monthlyHoursAvail   Int?
+  portfolioFiles      String[]
+  videoIntroUrl       String?
+  status              SpecialistStatus @default(APPLIED)
+  approvedAt          DateTime?
+  approvedBy          String?
+  rejectionReason     String?
+  averageRating       Float?           @default(0)
+  totalAssignments    Int              @default(0)
+  totalEarnings       Int              @default(0)
+  revenueSharePct     Int              @default(60)
+  bankAccountNumber   String?
+  bankIfsc            String?
+  bankAccountHolder   String?
+  bankVerified        Boolean          @default(false)
+  upiId               String?
+  panNumber           String?
+  panVerified         Boolean          @default(false)
+  gstNumber           String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  publishedAssets Asset[]
+  assignments     Assignment[]
+  payouts         Payout[]
+  reviews         SpecialistReview[]
+}
+
+enum SpecialistStatus {
+  APPLIED
+  UNDER_REVIEW
+  REVISIONS_REQUESTED
+  APPROVED
+  ACTIVE
+  SUSPENDED
+}
+
+// ============================
+// ASSET / FRAMEWORK MODELS
+// ============================
+
+model Asset {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  title           String
+  description     String        @db.Text
+  category        AssetCategory
+  serviceDomain   String
+  targetSectors   String[]
+  complexityLevel String
+  tags            String[]
+  targetAudience  String?
+  timeToComplete  String?
+  language        String        @default("en")
+  price           Int
+  memberPrice     Int?
+  components      Json
+  fileUrls        Json
+  previewImages   String[]
+  previewUrl      String?
+  version         String        @default("1.0")
+  status          AssetStatus   @default(DRAFT)
+  isFeatured      Boolean       @default(false)
+  licenceType     String        @default("single-use")
+  exclusivity     String        @default("exclusive")
+
+  authorId String
+  author   SpecialistProfile @relation(fields: [authorId], references: [id])
+
+  reviewNotes    String?
+  reviewedBy     String?
+  averageRating  Float?  @default(0)
+  totalPurchases Int     @default(0)
+  totalViews     Int     @default(0)
+  totalRevenue   Int     @default(0)
+  refundRate     Float?  @default(0)
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  orderItems     OrderItem[]
+  reviews        AssetReview[]
+  frameworkAccess FrameworkAccess[]
+  cartItems      CartItem[]
+}
+
+enum AssetCategory {
+  AI_TOOLKIT
+  STRATEGY_FRAMEWORK
+  OPERATIONS_TEMPLATE
+  MSME_GROWTH_KIT
+  FINANCIAL_MODEL
+  HR_PEOPLE
+  CONSULTING_ENGAGEMENT
+  WEBINAR
+  PLAYBOOK
+  DIAGNOSTIC
+  CALCULATOR
+  CASE_STUDY
+}
+
+enum AssetStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  REVISIONS_REQUESTED
+  APPROVED
+  PUBLISHED
+  RETIRED
+}
+
+model FrameworkAccess {
+  id              String        @id @default(cuid())
+  clientProfileId String
+  client          ClientProfile @relation(fields: [clientProfileId], references: [id])
+  assetId         String
+  asset           Asset         @relation(fields: [assetId], references: [id])
+  status          String        @default("not_started")
+  progress        Json?
+  notes           String?       @db.Text
+  downloadCount   Int           @default(0)
+  lastAccessedAt  DateTime?
+  grantedAt       DateTime      @default(now())
+}
+
+// ============================
+// ORDER & PAYMENT MODELS
+// ============================
+
+model CartItem {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id])
+  assetId String
+  asset   Asset    @relation(fields: [assetId], references: [id])
+  addedAt DateTime @default(now())
+
+  @@unique([userId, assetId])
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  orderNumber      String      @unique
+  userId           String
+  user             User        @relation(fields: [userId], references: [id])
+  items            OrderItem[]
+  subtotal         Int
+  gstAmount        Int
+  discountAmount   Int         @default(0)
+  totalAmount      Int
+  couponCode       String?
+  currency         String      @default("INR")
+  status           OrderStatus @default(PENDING)
+  paymentGateway   String?
+  gatewayOrderId   String?
+  gatewayPaymentId String?
+  paymentMethod    String?
+  invoiceNumber    String?     @unique
+  invoiceUrl       String?
+  billingName      String?
+  billingGstin     String?
+  billingAddress   Json?
+  refundReason     String?
+  refundedAt       DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUND_REQUESTED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id])
+  assetId    String
+  asset      Asset   @relation(fields: [assetId], references: [id])
+  quantity   Int     @default(1)
+  unitPrice  Int
+  totalPrice Int
+  downloaded Boolean @default(false)
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  userId             String
+  user               User               @relation(fields: [userId], references: [id])
+  planId             String
+  plan               SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status             SubscriptionStatus @default(ACTIVE)
+  gatewaySubId       String?
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelledAt        DateTime?
+  cancelReason       String?
+  autoRenew          Boolean            @default(true)
+  retryCount         Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+model SubscriptionPlan {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  description   String?
+  priceMonthly  Int
+  priceAnnual   Int
+  features      Json
+  isActive      Boolean        @default(true)
+  sortOrder     Int            @default(0)
+  subscriptions Subscription[]
+}
+
+// ============================
+// ASSIGNMENT / ENGAGEMENT MODELS
+// ============================
+
+model Assignment {
+  id                  String             @id @default(cuid())
+  clientProfileId     String
+  client              ClientProfile      @relation(fields: [clientProfileId], references: [id])
+  specialistProfileId String?
+  specialist          SpecialistProfile? @relation(fields: [specialistProfileId], references: [id])
+  title               String
+  brief               String             @db.Text
+  sector              String
+  serviceDomain       String
+  deliverables        String[]
+  status              AssignmentStatus   @default(REQUESTED)
+  estimatedHours      Int?
+  agreedFee           Int?
+  feeType             String?
+  startDate           DateTime?
+  dueDate             DateTime?
+  completedAt         DateTime?
+  files               Json[]
+  completionReport    Json?
+  clientRating        Int?
+  clientReview        String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  messages   AssignmentMessage[]
+  milestones AssignmentMilestone[]
+}
+
+enum AssignmentStatus {
+  REQUESTED
+  MATCHED
+  ACCEPTED
+  IN_PROGRESS
+  DELIVERED
+  UNDER_REVIEW
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+model AssignmentMilestone {
+  id            String     @id @default(cuid())
+  assignmentId  String
+  assignment    Assignment @relation(fields: [assignmentId], references: [id])
+  title         String
+  description   String?
+  dueDate       DateTime?
+  isCompleted   Boolean    @default(false)
+  completedAt   DateTime?
+  paymentAmount Int?
+  sortOrder     Int
+}
+
+model AssignmentMessage {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  senderId     String
+  message      String     @db.Text
+  attachments  String[]
+  createdAt    DateTime   @default(now())
+}
+
+// ============================
+// SPECIALIST PAYOUTS
+// ============================
+
+model Payout {
+  id                  String            @id @default(cuid())
+  specialistProfileId String
+  specialist          SpecialistProfile @relation(fields: [specialistProfileId], references: [id])
+  grossAmount         Int
+  platformFee         Int
+  tdsAmount           Int
+  netAmount           Int
+  description         String
+  sourceType          String
+  sourceIds           String[]
+  status              PayoutStatus      @default(SCHEDULED)
+  scheduledDate       DateTime
+  processedAt         DateTime?
+  transactionId       String?
+  bankReference       String?
+  failureReason       String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+enum PayoutStatus {
+  SCHEDULED
+  PROCESSING
+  PROCESSED
+  FAILED
+  ON_HOLD
+  DISPUTED
+}
+
+// ============================
+// AI CHATBOT
+// ============================
+
+model ChatSession {
+  id           String        @id @default(cuid())
+  userId       String?
+  user         User?         @relation(fields: [userId], references: [id])
+  title        String?
+  summary      String?       @db.Text
+  status       String        @default("active")
+  metadata     Json?
+  sector       String?
+  satisfaction Int?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id])
+  role      String
+  content   String      @db.Text
+  metadata  Json?
+  feedback  String?
+  createdAt DateTime    @default(now())
+}
+
+// ============================
+// AI READINESS ASSESSMENT
+// ============================
+
+model Assessment {
+  id              String   @id @default(cuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  email           String?
+  sector          String
+  companySize     String?
+  responses       Json
+  totalScore      Int
+  maxScore        Int      @default(150)
+  maturityLevel   Int
+  dimensionScores Json
+  recommendations Json
+  reportUrl       String?
+  createdAt       DateTime @default(now())
+}
+
+// ============================
+// REVIEWS
+// ============================
+
+model AssetReview {
+  id         String   @id @default(cuid())
+  assetId    String
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  userId     String
+  rating     Int
+  review     String?  @db.Text
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([assetId, userId])
+}
+
+model SpecialistReview {
+  id                  String            @id @default(cuid())
+  specialistProfileId String
+  specialist          SpecialistProfile @relation(fields: [specialistProfileId], references: [id])
+  userId              String
+  assignmentId        String?
+  rating              Int
+  review              String?           @db.Text
+  createdAt           DateTime          @default(now())
+}
+
+// ============================
+// PLATFORM MANAGEMENT
+// ============================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  actionUrl String?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+}
+
+model Coupon {
+  id                   String   @id @default(cuid())
+  code                 String   @unique
+  description          String?
+  discountType         String
+  discountValue        Int
+  maxUses              Int?
+  usedCount            Int      @default(0)
+  minOrderAmount       Int?
+  applicableCategories String[]
+  applicableSectors    String[]
+  validFrom            DateTime
+  validUntil           DateTime
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  expires      DateTime
+  createdAt    DateTime @default(now())
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  name        String
+  title       String
+  company     String
+  sector      String
+  quote       String   @db.Text
+  photoUrl    String?
+  linkedinUrl String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model CaseStudy {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  sector      String
+  service     String
+  challenge   String    @db.Text
+  approach    String    @db.Text
+  outcomes    String    @db.Text
+  metrics     Json
+  clientQuote String?   @db.Text
+  clientName  String?
+  clientTitle String?
+  heroImage   String?
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model BlogPost {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  title           String
+  excerpt         String?
+  content         String    @db.Text
+  category        String
+  tags            String[]
+  authorName      String
+  authorAvatar    String?
+  authorBio       String?
+  heroImage       String?
+  ogImage         String?
+  metaTitle       String?
+  metaDescription String?
+  primaryKeyword  String?
+  readingTime     Int?
+  status          String    @default("draft")
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ContactSubmission {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  company     String?
+  sector      String?
+  inquiryType String
+  message     String   @db.Text
+  status      String   @default("new")
+  assignedTo  String?
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  isActive       Boolean   @default(true)
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+}
