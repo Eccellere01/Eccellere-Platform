@@ -20,7 +20,9 @@ import {
   Bell,
   Search,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -259,7 +261,7 @@ export default function AdminDashboard() {
           </div>
         </nav>
 
-        <div className="border-t border-eccellere-ink/5 p-3">
+        <div className="border-t border-eccellere-ink/5 p-3 space-y-1">
           <Link
             href="/"
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-ink-light transition-colors hover:text-eccellere-ink"
@@ -267,6 +269,13 @@ export default function AdminDashboard() {
             <ChevronRight className="h-4 w-4 rotate-180" />
             {sidebarOpen && "Back to site"}
           </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-ink-light transition-colors hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut className="h-4 w-4" />
+            {sidebarOpen && "Sign out"}
+          </button>
         </div>
       </aside>
 
