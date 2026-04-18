@@ -170,8 +170,7 @@ export default function SpecialistDashboard() {
   ];
 
   return (
-    <>
-      <div className="mx-auto max-w-[1280px]">
+    <div className="mx-auto max-w-[1280px]">
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -487,8 +486,6 @@ export default function SpecialistDashboard() {
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
