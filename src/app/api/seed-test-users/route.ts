@@ -27,16 +27,16 @@ async function seedUsers() {
             city: "Coimbatore",
             state: "Tamil Nadu",
             yearsInBusiness: 8,
-            challenges: JSON.stringify([
+            challenges: [
               "Scaling operations",
               "Digital transformation",
               "Working capital management",
-            ]),
-            priorities: JSON.stringify([
+            ],
+            priorities: [
               "Revenue growth",
               "Process automation",
               "Market expansion",
-            ]),
+            ],
             consultingExperience: "first_time",
             onboardingComplete: true,
             leadScore: 75,
@@ -68,7 +68,7 @@ async function seedUsers() {
             currentRole: "Independent Management Consultant",
             organisation: "Sharma Consulting Partners",
             experienceYears: "15+",
-            education: JSON.stringify([
+            education: [
               {
                 degree: "PhD in Business Administration",
                 institution: "IIM Ahmedabad",
@@ -84,45 +84,45 @@ async function seedUsers() {
                 institution: "IIT Madras",
                 year: 2006,
               },
-            ]),
-            certifications: JSON.stringify([
+            ],
+            certifications: [
               "PMP - Project Management Professional",
               "Six Sigma Black Belt",
               "Certified Management Consultant (CMC)",
               "Google Analytics Certified",
-            ]),
-            serviceDomains: JSON.stringify([
+            ],
+            serviceDomains: [
               "Strategy & Planning",
               "Digital Transformation",
               "Operations Excellence",
               "Financial Advisory",
-            ]),
-            sectorExpertise: JSON.stringify([
+            ],
+            sectorExpertise: [
               "Manufacturing",
               "Textiles",
               "FMCG",
               "IT Services",
               "Healthcare",
-            ]),
-            challengesAddressed: JSON.stringify([
+            ],
+            challengesAddressed: [
               "Business scaling",
               "Process optimization",
               "Market entry strategy",
               "Working capital management",
               "Technology adoption",
-            ]),
-            languages: JSON.stringify(["English", "Hindi", "Tamil"]),
-            engagementTypes: JSON.stringify([
+            ],
+            languages: ["English", "Hindi", "Tamil"],
+            engagementTypes: [
               "One-time consultation",
               "Retainer advisory",
               "Project-based",
               "Workshop facilitation",
-            ]),
+            ],
             hourlyRateMin: 3000,
             hourlyRateMax: 8000,
             availability: "part_time",
             monthlyHoursAvail: 40,
-            portfolioFiles: JSON.stringify([]),
+            portfolioFiles: [],
             status: "ACTIVE",
             approvedAt: new Date(),
             averageRating: 4.8,

@@ -61,10 +61,20 @@ export const authOptions: NextAuthOptions = {
       : []),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as { role: string }).role;
+        if (account?.provider === "google") {
+          // Google profile doesn't carry our role — look it up from DB
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email! },
+            select: { id: true, role: true },
+          });
+          token.id = dbUser?.id ?? user.id;
+          token.role = dbUser?.role ?? "CLIENT";
+        } else {
+          token.role = (user as { role: string }).role;
+        }
       }
       return token;
     },

@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Upload, PlusCircle, X } from "lucide-react";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 
 const CATEGORIES = [
@@ -69,9 +67,8 @@ export default function SubmitNewAssetPage() {
 
   if (submitted) {
     return (
-      <>
-        <Header />
-        <main className="bg-eccellere-cream pt-[72px]">
+      <div>
+        <div>
           <div className="mx-auto flex min-h-[60vh] max-w-[640px] flex-col items-center justify-center px-6 py-24 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-eccellere-teal/10">
               <PlusCircle className="h-8 w-8 text-eccellere-teal" />
@@ -91,16 +88,14 @@ export default function SubmitNewAssetPage() {
               <Button onClick={() => setSubmitted(false)}>Submit Another</Button>
             </div>
           </div>
-        </main>
-        <Footer />
-      </>
+        </div>
+      </div>
     );
   }
 
   return (
-    <>
-      <Header />
-      <main className="bg-eccellere-cream pt-[72px]">
+    <div>
+      <div>
         <div className="mx-auto max-w-[800px] px-6 py-12 lg:py-16">
           {/* Breadcrumb */}
           <Link
@@ -411,8 +406,7 @@ export default function SubmitNewAssetPage() {
             </div>
           </form>
         </div>
-      </main>
-      <Footer />
-    </>
+      </div>
+    </div>
   );
 }

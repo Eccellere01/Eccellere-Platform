@@ -4,6 +4,9 @@ import { getToken } from "next-auth/jwt";
 // Routes that require authentication
 const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/specialist"];
 
+// Public exceptions within protected prefixes (no auth required)
+const PUBLIC_EXCEPTIONS = ["/specialist/register"];
+
 // Routes that redirect authenticated users away (login, register)
 const AUTH_REDIRECT_PATHS = ["/login", "/register"];
 
@@ -21,7 +24,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Auth route-guard ──────────────────────────────────────────────────────
-  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
+  const isPublicException = PUBLIC_EXCEPTIONS.includes(pathname);
+  const isProtected = !isPublicException && PROTECTED_PREFIXES.some((prefix) =>
     pathname.startsWith(prefix)
   );
   const isAuthPage = AUTH_REDIRECT_PATHS.includes(pathname);
