@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -30,7 +30,15 @@ export default function LoginPage() {
       setError("Invalid email or password");
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      const session = await getSession();
+      const role = (session?.user as { role?: string })?.role;
+      if (role === "ADMIN" || role === "SUPER_ADMIN" || role === "CONTENT_ADMIN") {
+        router.push("/admin");
+      } else if (role === "SPECIALIST") {
+        router.push("/specialist");
+      } else {
+        router.push("/dashboard");
+      }
     }
   }
 
@@ -87,7 +95,7 @@ export default function LoginPage() {
                 <Button
                   variant="ghost"
                   className="w-full"
-                  onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                  onClick={() => signIn("google", { callbackUrl: "/login" })}
                 >
                   Continue with Google
                 </Button>

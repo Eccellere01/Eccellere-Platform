@@ -38,6 +38,23 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
+    // Redirect users away from wrong dashboards
+    if (isProtected && token) {
+      const role = (token.role as string) ?? "";
+      const isAdmin = ["SUPER_ADMIN", "ADMIN", "CONTENT_ADMIN"].includes(role);
+      const isSpecialist = role === "SPECIALIST" || role === "SPECIALIST_ADMIN";
+
+      if (pathname.startsWith("/dashboard") && (isAdmin || isSpecialist)) {
+        return NextResponse.redirect(new URL(isAdmin ? "/admin" : "/specialist", request.url));
+      }
+      if (pathname.startsWith("/specialist") && !isSpecialist && !isAdmin) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      if (pathname.startsWith("/admin") && !isAdmin) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
+
     if (isAuthPage && token) {
       // Already authenticated — redirect to appropriate dashboard
       const role = (token.role as string) ?? "";
