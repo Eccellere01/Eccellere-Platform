@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Upload, PlusCircle, X, FileCheck } from "lucide-react";
+import { ArrowLeft, Upload, PlusCircle, X, FileCheck, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const CATEGORIES = [
@@ -41,6 +41,43 @@ export default function SubmitNewAssetPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  // AI fill state
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  async function handleAiGenerate() {
+    setAiError("");
+    setIsGenerating(true);
+    try {
+      const res = await fetch("/api/specialist/assets/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: aiPrompt }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Generation failed");
+      setForm((prev) => ({
+        ...prev,
+        title: json.title || prev.title,
+        tagline: json.tagline || prev.tagline,
+        category: json.category || prev.category,
+        format: json.format || prev.format,
+        price: json.price || prev.price,
+        description: json.description || prev.description,
+        targetAudience: json.targetAudience || prev.targetAudience,
+        tags: json.tags?.length ? json.tags : prev.tags,
+      }));
+      setShowAiModal(false);
+      setAiPrompt("");
+    } catch (err: unknown) {
+      setAiError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -142,17 +179,28 @@ export default function SubmitNewAssetPage() {
           </Link>
 
           {/* Page heading */}
-          <div className="mt-6">
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-eccellere-gold">
-              Specialist Portal
-            </p>
-            <h1 className="mt-2 font-display text-3xl font-light text-eccellere-ink lg:text-4xl">
-              Submit New Asset
-            </h1>
-            <p className="mt-2 text-sm text-ink-light">
-              Share your expertise. Submitted assets go through a quality review before
-              being listed on the Eccellere Marketplace.
-            </p>
+          <div className="mt-6 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-eccellere-gold">
+                Specialist Portal
+              </p>
+              <h1 className="mt-2 font-display text-3xl font-light text-eccellere-ink lg:text-4xl">
+                Submit New Asset
+              </h1>
+              <p className="mt-2 text-sm text-ink-light">
+                Share your expertise. Submitted assets go through a quality review before
+                being listed on the Eccellere Marketplace.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-8 shrink-0 gap-2 border-eccellere-gold/40 text-eccellere-gold hover:bg-eccellere-gold/5"
+              onClick={() => { setAiError(""); setShowAiModal(true); }}
+            >
+              <Sparkles className="h-4 w-4" />
+              AI Fill
+            </Button>
           </div>
 
           {/* Form */}
@@ -468,6 +516,61 @@ export default function SubmitNewAssetPage() {
           </form>
         </div>
       </div>
+
+      {/* ── AI Fill Modal ── */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-eccellere-gold" />
+                <h2 className="text-base font-semibold text-eccellere-ink">AI Fill</h2>
+              </div>
+              <button
+                onClick={() => setShowAiModal(false)}
+                className="rounded p-1 text-ink-light hover:text-eccellere-ink"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mt-2 text-sm text-ink-mid">
+              Describe your asset in your own words — what it covers, who it&apos;s for, and
+              what problem it solves. The AI will generate a complete draft for you to review
+              before submitting.
+            </p>
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              rows={6}
+              placeholder="e.g. A step-by-step playbook I built for MSME manufacturers looking to reduce waste on their production floor. It covers lean assessment, value stream mapping, and a 90-day implementation roadmap. Includes Excel templates for tracking OEE and a PowerPoint for team communication."
+              className="mt-4 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+            />
+            <p className="mt-1 text-right text-[11px] text-ink-light">{aiPrompt.length}/2000</p>
+            {aiError && (
+              <p className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {aiError}
+              </p>
+            )}
+            <div className="mt-4 flex items-center justify-end gap-3">
+              <Button variant="outline" size="sm" onClick={() => setShowAiModal(false)} disabled={isGenerating}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleAiGenerate}
+                disabled={isGenerating || aiPrompt.trim().length < 20}
+                className="gap-2"
+              >
+                {isGenerating ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
+                ) : (
+                  <><Sparkles className="h-4 w-4" /> Generate Draft</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
