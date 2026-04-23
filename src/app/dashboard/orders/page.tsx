@@ -1,114 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, ArrowUpRight, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS = ["All", "Completed", "Processing", "Refunded"];
 
-const orders = [
-  {
-    id: "ORD-2041",
-    asset: "MSME Growth Strategy Playbook",
-    category: "Strategy",
-    date: "Apr 10, 2026",
-    amount: "₹4,999",
-    payment: "Razorpay",
-    status: "completed",
-    invoice: true,
-  },
-  {
-    id: "ORD-2038",
-    asset: "Supply Chain Risk Assessment Tool",
-    category: "Supply Chain",
-    date: "Apr 6, 2026",
-    amount: "₹7,500",
-    payment: "UPI",
-    status: "completed",
-    invoice: true,
-  },
-  {
-    id: "ORD-2031",
-    asset: "Retail Analytics Dashboard Template",
-    category: "Digital",
-    date: "Mar 28, 2026",
-    amount: "₹5,499",
-    payment: "Card",
-    status: "completed",
-    invoice: true,
-  },
-  {
-    id: "ORD-2024",
-    asset: "AI Readiness Benchmark Report",
-    category: "Digital",
-    date: "Mar 14, 2026",
-    amount: "₹3,299",
-    payment: "UPI",
-    status: "completed",
-    invoice: true,
-  },
-  {
-    id: "ORD-1988",
-    asset: "Working Capital Optimisation Framework",
-    category: "Finance",
-    date: "Feb 22, 2026",
-    amount: "₹6,200",
-    payment: "Razorpay",
-    status: "completed",
-    invoice: true,
-  },
-  {
-    id: "ORD-1964",
-    asset: "HR Policy Manual Template — Manufacturing",
-    category: "HR & Talent",
-    date: "Feb 10, 2026",
-    amount: "₹2,499",
-    payment: "Card",
-    status: "completed",
-    invoice: true,
-  },
-  {
-    id: "ORD-1941",
-    asset: "SOP Mapping & Process Documentation Kit",
-    category: "Process",
-    date: "Jan 30, 2026",
-    amount: "₹8,999",
-    payment: "UPI",
-    status: "completed",
-    invoice: true,
-  },
-  {
-    id: "ORD-1912",
-    asset: "Demand Forecasting Model — Consumer Goods",
-    category: "Supply Chain",
-    date: "Jan 15, 2026",
-    amount: "₹4,499",
-    payment: "Razorpay",
-    status: "completed",
-    invoice: true,
-  },
-  {
-    id: "ORD-1875",
-    asset: "Digital Marketing Audit Framework",
-    category: "Digital",
-    date: "Dec 28, 2025",
-    amount: "₹3,999",
-    payment: "UPI",
-    status: "refunded",
-    invoice: false,
-  },
-  {
-    id: "ORD-2050",
-    asset: "Manufacturing Cost Reduction Toolkit",
-    category: "Process",
-    date: "Apr 13, 2026",
-    amount: "₹5,999",
-    payment: "Card",
-    status: "processing",
-    invoice: false,
-  },
-];
+type Order = {
+  id: string;
+  dbId?: string;
+  asset: string;
+  assetSlug?: string;
+  category: string;
+  date: string;
+  amount: string;
+  payment: string;
+  status: string;
+  invoice: boolean;
+  invoiceUrl?: string | null;
+};
 
 const statusStyles: Record<string, string> = {
   completed: "bg-eccellere-teal/10 text-eccellere-teal",
@@ -117,8 +28,18 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+
+  useEffect(() => {
+    fetch("/api/dashboard/orders")
+      .then((r) => r.json())
+      .then((data) => setOrders(data.orders ?? []))
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = orders.filter((o) => {
     const matchSearch =
@@ -141,12 +62,16 @@ export default function OrdersPage() {
             Client Dashboard
           </p>
           <h1 className="mt-1 font-display text-3xl font-light text-eccellere-ink">Order History</h1>
-          <p className="mt-1 text-sm text-ink-light">
-            {orders.length} orders · Lifetime spend{" "}
-            <span className="font-mono font-medium text-eccellere-ink">
-              ₹{total.toLocaleString("en-IN")}
-            </span>
-          </p>
+          {loading ? (
+            <p className="mt-1 text-sm text-ink-light">Loading orders…</p>
+          ) : (
+            <p className="mt-1 text-sm text-ink-light">
+              {orders.length} orders · Lifetime spend{" "}
+              <span className="font-mono font-medium text-eccellere-ink">
+                ₹{total.toLocaleString("en-IN")}
+              </span>
+            </p>
+          )}
         </div>
         <button className="hidden items-center gap-1.5 rounded border border-eccellere-ink/10 bg-white px-3 py-2 text-xs text-ink-mid transition-colors hover:border-eccellere-gold/40 sm:flex">
           <Download className="h-3.5 w-3.5" />
@@ -256,7 +181,9 @@ export default function OrdersPage() {
         </div>
         {filtered.length === 0 && (
           <div className="py-12 text-center">
-            <p className="text-sm text-ink-light">No orders match your search.</p>
+            <p className="text-sm text-ink-light">
+              {loading ? "Loading…" : orders.length === 0 ? "You have no orders yet." : "No orders match your search."}
+            </p>
           </div>
         )}
       </div>

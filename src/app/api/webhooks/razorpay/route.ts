@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
+import { prisma } from "@/lib/prisma";
 
 // Razorpay sends a POST to this endpoint with payment events.
 // We verify the webhook signature using RAZORPAY_WEBHOOK_SECRET.
@@ -50,14 +51,87 @@ export async function POST(request: NextRequest) {
         ?.payment?.entity;
       if (payment) {
         const notes = payment.notes as Record<string, string> | undefined;
+        const razorpayOrderId = String(payment.order_id ?? "");
+        const razorpayPaymentId = String(payment.id ?? "");
+        const amountPaise = Number(payment.amount ?? 0);
+        const customerEmail = notes?.customerEmail ?? "";
+        const assetSlug = notes?.assetSlug ?? "";
+
         console.log("[webhook/razorpay] payment.captured", {
-          paymentId: payment.id,
-          orderId: payment.order_id,
-          amount: payment.amount,
-          customerEmail: notes?.customerEmail,
-          assetSlug: notes?.assetSlug,
+          paymentId: razorpayPaymentId,
+          orderId: razorpayOrderId,
+          amount: amountPaise,
+          customerEmail,
+          assetSlug,
         });
-        // In production: update order status in DB → Prisma, trigger download email
+
+        // Persist order as fallback (idempotent — PATCH handler may have already done this)
+        if (customerEmail && assetSlug && razorpayOrderId) {
+          try {
+            // Idempotency check first to avoid duplicate inserts
+            const existing = await prisma.order.findFirst({
+              where: { gatewayOrderId: razorpayOrderId },
+              select: { id: true },
+            });
+            if (!existing) {
+              const [user, asset] = await Promise.all([
+                prisma.user.findUnique({
+                  where: { email: customerEmail },
+                  select: { id: true, clientProfile: { select: { id: true } } },
+                }),
+                prisma.asset.findFirst({
+                  where: { slug: assetSlug },
+                  select: { id: true },
+                }),
+              ]);
+
+              if (user && asset) {
+                const amountRupees = Math.round(amountPaise / 100);
+                const orderNumber = `ORD-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+
+                await prisma.$transaction(async (tx) => {
+                  const o = await tx.order.create({
+                    data: {
+                      orderNumber,
+                      userId: user.id,
+                      subtotal: amountRupees,
+                      gstAmount: 0,
+                      discountAmount: 0,
+                      totalAmount: amountRupees,
+                      currency: "INR",
+                      status: "PAID",
+                      paymentGateway: "razorpay",
+                      gatewayOrderId: razorpayOrderId,
+                      gatewayPaymentId: razorpayPaymentId,
+                      items: {
+                        create: { assetId: asset.id, quantity: 1, unitPrice: amountRupees, totalPrice: amountRupees },
+                      },
+                    },
+                    select: { id: true },
+                  });
+
+                  if (user.clientProfile?.id) {
+                    const fa = await tx.frameworkAccess.findFirst({
+                      where: { clientProfileId: user.clientProfile.id, assetId: asset.id },
+                      select: { id: true },
+                    });
+                    if (!fa) {
+                      await tx.frameworkAccess.create({
+                        data: { clientProfileId: user.clientProfile.id, assetId: asset.id, status: "purchased" },
+                      });
+                    }
+                  }
+                  return o;
+                });
+                console.log("[webhook/razorpay] order persisted via webhook fallback:", orderNumber);
+              }
+            } else {
+              console.log("[webhook/razorpay] order already exists, skipping duplicate:", razorpayOrderId);
+            }
+          } catch (err) {
+            console.error("[webhook/razorpay] DB persist error:", err);
+          }
+        }
       }
       break;
     }
