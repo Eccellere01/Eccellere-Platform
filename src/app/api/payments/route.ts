@@ -215,12 +215,6 @@ async function persistOrderToDb({
   razorpayPaymentId: string;
   amountPaise: number;
 }): Promise<{ id: string; orderNumber: string }> {
-  // Mock orders in dev — no DB write needed
-  if (razorpayOrderId.startsWith("mock_order_")) {
-    const n = `ORD-${Date.now().toString().slice(-6)}`;
-    return { id: n, orderNumber: n };
-  }
-
   // Idempotency: return existing order if this gateway order was already recorded
   const existing = await prisma.order.findFirst({
     where: { gatewayOrderId: razorpayOrderId },
