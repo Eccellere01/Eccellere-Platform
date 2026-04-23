@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
+import { createWriteStream, existsSync } from "fs";
+import { mkdir } from "fs/promises";
+import { pipeline } from "stream/promises";
+import { Readable } from "stream";
 import path from "path";
 
 const CATEGORY_MAP: Record<string, string> = {
@@ -31,7 +34,7 @@ const ALLOWED_TYPES = new Set([
   "application/x-zip-compressed",
 ]);
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB — conservative for Hostinger shared hosting
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -78,15 +81,13 @@ export async function POST(req: NextRequest) {
   let fileUrl = "";
   if (file) {
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "File exceeds 50 MB limit" }, { status: 400 });
+      return NextResponse.json({ error: "File exceeds 25 MB limit" }, { status: 400 });
     }
     if (!ALLOWED_TYPES.has(file.type)) {
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
+    // Stream the file directly to disk — avoids loading the whole buffer into RAM.
     // Sanitize filename — strip any path traversal characters
     const safeName = file.name
       .replace(/[^\w.\-]/g, "_")
@@ -95,8 +96,16 @@ export async function POST(req: NextRequest) {
     const uniqueName = `${Date.now()}-${safeName}`;
 
     const uploadDir = path.join(process.cwd(), "public", "uploads", "assets");
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(path.join(uploadDir, uniqueName), buffer);
+    if (!existsSync(uploadDir)) {
+      await mkdir(uploadDir, { recursive: true });
+    }
+    const destPath = path.join(uploadDir, uniqueName);
+
+    const nodeReadable = Readable.fromWeb(
+      file.stream() as import("stream/web").ReadableStream
+    );
+    const writeStream = createWriteStream(destPath);
+    await pipeline(nodeReadable, writeStream);
 
     fileUrl = `/uploads/assets/${uniqueName}`;
   }
