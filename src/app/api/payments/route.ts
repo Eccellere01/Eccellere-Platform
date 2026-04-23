@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // ── POST /api/payments ─────────────────────────────────────────────────────
 // Creates a Razorpay order and returns the order_id + key_id.
 // Client then opens Razorpay checkout with these details.
@@ -59,8 +61,11 @@ export async function POST(request: NextRequest) {
 
   let rzpData: { id: string; amount: number; currency: string };
   try {
+    const rzpAbort = new AbortController();
+    const rzpTimeout = setTimeout(() => rzpAbort.abort(), 10_000);
     const rzpResponse = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
+      signal: rzpAbort.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Basic ${credentials}`,
@@ -76,6 +81,7 @@ export async function POST(request: NextRequest) {
         },
       }),
     });
+    clearTimeout(rzpTimeout);
 
     if (!rzpResponse.ok) {
       const errorBody = await rzpResponse.text();
