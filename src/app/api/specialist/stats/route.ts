@@ -64,7 +64,7 @@ export async function GET() {
         },
       }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("DB timeout")), 8000)
+        setTimeout(() => reject(new Error("DB timeout")), 5000)
       ),
     ]);
 

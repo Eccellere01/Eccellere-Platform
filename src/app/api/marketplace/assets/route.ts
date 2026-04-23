@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Cache public marketplace asset list for 60 s on the server to avoid hammering
+// the DB on every page load (Hostinger shared DB has a tiny connection pool).
+export const revalidate = 60;
+
 const CATEGORY_DISPLAY: Record<string, { label: string; color: string }> = {
   AI_TOOLKIT:            { label: "Agentic AI",              color: "bg-eccellere-teal/20 text-eccellere-teal" },
   STRATEGY_FRAMEWORK:    { label: "Strategy",                color: "bg-eccellere-gold/20 text-eccellere-gold" },
