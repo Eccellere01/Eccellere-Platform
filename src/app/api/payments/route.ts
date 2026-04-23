@@ -38,13 +38,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // TEMP: force mock mode to test checkout flow end-to-end
+  // TODO: remove this override once Razorpay is confirmed working
+  const FORCE_MOCK = true;
+
   const keyId = process.env.RAZORPAY_KEY_ID;
 
   // Real keys look like: rzp_test_<10+ alphanumeric chars> or rzp_live_<...>
   const isRealKey = (k: string) => /^rzp_(test|live)_[A-Za-z0-9]{10,}$/.test(k) && !k.includes("X");
 
   // If Razorpay is not configured, return a mock order for development
-  if (!keyId || !isRealKey(keyId)) {
+  if (FORCE_MOCK || !keyId || !isRealKey(keyId)) {
     return NextResponse.json({
       orderId: `mock_order_${Date.now()}`,
       amount: body.amount,
