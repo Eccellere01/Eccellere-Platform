@@ -40,6 +40,13 @@ export function NotificationBell({ scrolled }: { scrolled?: boolean }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Only fetch if the browser has a next-auth session cookie, so unauthenticated
+    // visitors (/, /marketplace, /login, etc.) never trigger a server request.
+    // This prevents the notification route from being the hottest endpoint.
+    const hasSession = document.cookie.includes("next-auth.session-token") ||
+      document.cookie.includes("__Secure-next-auth.session-token");
+    if (!hasSession) return;
+
     fetch("/api/notifications")
       .then((r) => r.json())
       .then((data) => {

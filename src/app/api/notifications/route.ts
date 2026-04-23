@@ -84,6 +84,13 @@ export async function GET(request: Request) {
     notifications: filtered,
     unreadCount: notifications.filter((n) => !n.isRead).length,
     total: notifications.length,
+  }, {
+    headers: {
+      // Allow browser to serve the cached response for 30 s, then revalidate
+      // in the background. This dramatically reduces repeated hits from a single
+      // logged-in user navigating between pages.
+      "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+    },
   });
 }
 

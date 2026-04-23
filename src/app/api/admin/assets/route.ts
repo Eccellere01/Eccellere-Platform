@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 function isAdmin(role?: string | null) {
   return role === "ADMIN" || role === "SPECIALIST_ADMIN";
 }
@@ -17,28 +19,40 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const statusFilter = searchParams.get("status"); // e.g. "SUBMITTED"
 
-  const assets = await prisma.asset.findMany({
-    where: statusFilter ? { status: statusFilter as never } : undefined,
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      serviceDomain: true,
-      category: true,
-      status: true,
-      price: true,
-      totalPurchases: true,
-      averageRating: true,
-      createdAt: true,
-      components: true,
-      downloadEnabled: true,
-      author: {
+  let assets;
+  try {
+    assets = await Promise.race([
+      prisma.asset.findMany({
+        where: statusFilter ? { status: statusFilter as never } : undefined,
+        orderBy: { createdAt: "desc" },
         select: {
-          user: { select: { name: true, email: true } },
+          id: true,
+          title: true,
+          serviceDomain: true,
+          category: true,
+          status: true,
+          price: true,
+          totalPurchases: true,
+          averageRating: true,
+          createdAt: true,
+          components: true,
+          downloadEnabled: true,
+          author: {
+            select: {
+              user: { select: { name: true, email: true } },
+            },
+          },
         },
-      },
-    },
-  });
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("DB timeout")), 5000)
+      ),
+    ]);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[admin/assets] DB error:", message);
+    return NextResponse.json({ error: "Service temporarily unavailable", detail: message }, { status: 503 });
+  }
 
   return NextResponse.json({ assets });
 }
