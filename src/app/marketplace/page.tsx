@@ -35,17 +35,20 @@ export default function MarketplacePage() {
   const [showFilters, setShowFilters] = useState(false);
   const [dbAssets, setDbAssets] = useState<Asset[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
 
   const fetchDbAssets = useCallback(async () => {
     try {
       const res = await fetch("/api/marketplace/assets");
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json();
+      if (data.dbError) {
+        setDbError(data.dbError);
+      } else {
         setDbAssets(data.assets ?? []);
       }
-    } catch {
-      // silently fall back to static data
+    } catch (err) {
+      setDbError(err instanceof Error ? err.message : "Network error");
     } finally {
       setDbLoading(false);
     }
@@ -232,6 +235,11 @@ export default function MarketplacePage() {
 
             {/* Asset grid */}
             <div className="flex-1">
+              {dbError && (
+                <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+                  Live catalogue unavailable — DB error: {dbError}
+                </div>
+              )}
               <p className="mb-6 text-sm text-ink-light">
                 {dbLoading ? "Loading…" : `${sorted.length} asset${sorted.length !== 1 ? "s" : ""} found`}
               </p>

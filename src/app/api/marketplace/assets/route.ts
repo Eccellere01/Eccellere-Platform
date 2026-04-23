@@ -16,45 +16,55 @@ const CATEGORY_DISPLAY: Record<string, { label: string; color: string }> = {
   CASE_STUDY:            { label: "Strategy",                color: "bg-eccellere-gold/20 text-eccellere-gold" },
 };
 
-// GET /api/marketplace/assets — public, returns all PUBLISHED assets
+// GET /api/marketplace/assets — public, returns all PUBLISHED or APPROVED assets
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") ?? "";
 
-  const rawAssets = await prisma.asset.findMany({
-    where: {
-      status: "PUBLISHED" as never,
-      ...(search
-        ? {
-            OR: [
-              { title: { contains: search } },
-              { description: { contains: search } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: [
-      { isFeatured: "desc" },
-      { totalPurchases: "desc" },
-      { createdAt: "desc" },
-    ],
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      description: true,
-      category: true,
-      serviceDomain: true,
-      targetSectors: true,
-      components: true,
-      tags: true,
-      price: true,
-      averageRating: true,
-      totalPurchases: true,
-      isFeatured: true,
-      updatedAt: true,
-    },
-  });
+  let rawAssets;
+  try {
+    rawAssets = await prisma.asset.findMany({
+      where: {
+        status: { in: ["PUBLISHED", "APPROVED"] as never[] },
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search } },
+                { description: { contains: search } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [
+        { isFeatured: "desc" },
+        { totalPurchases: "desc" },
+        { createdAt: "desc" },
+      ],
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        category: true,
+        serviceDomain: true,
+        targetSectors: true,
+        components: true,
+        tags: true,
+        price: true,
+        averageRating: true,
+        totalPurchases: true,
+        isFeatured: true,
+        updatedAt: true,
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[marketplace/assets] DB error:", message);
+    return NextResponse.json(
+      { assets: [], dbError: message },
+      { status: 200 } // 200 so client can read the body and show a warning
+    );
+  }
 
   const assets = rawAssets.map((a) => {
     const catInfo =
