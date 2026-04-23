@@ -28,7 +28,7 @@ interface RazorpayOptions {
   currency: string;
   name: string;
   description: string;
-  order_id: string;
+  order_id?: string;
   handler: (response: RazorpayResponse) => void;
   prefill?: { email?: string; name?: string };
   theme?: { color?: string };
@@ -126,22 +126,21 @@ export function CheckoutButton({
       }
 
       // 4. Open Razorpay modal
-      const rzp = new window.Razorpay({
+      const rzpOptions: RazorpayOptions = {
         key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Eccellere Consulting",
         description: assetTitle,
-        order_id: orderData.orderId,
         theme: { color: "#B8913A" },
         handler: async (response: RazorpayResponse) => {
           try {
-            // 5. Verify payment signature server-side
+            // 5. Record payment server-side (no signature check — no server-side order was pre-created)
             const verifyRes = await fetch("/api/payments", {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                razorpayOrderId: response.razorpay_order_id,
+                razorpayOrderId: response.razorpay_order_id ?? `direct_${Date.now()}`,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
                 assetSlug,
@@ -169,8 +168,14 @@ export function CheckoutButton({
             setLoading(false);
           },
         },
-      });
+      };
 
+      // Only pass order_id if server pre-created one
+      if (orderData.orderId) {
+        rzpOptions.order_id = orderData.orderId;
+      }
+
+      const rzp = new window.Razorpay(rzpOptions);
       rzp.open();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong";

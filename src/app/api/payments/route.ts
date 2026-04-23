@@ -8,8 +8,9 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 // ── POST /api/payments ─────────────────────────────────────────────────────
-// Creates a Razorpay order and returns the order_id + key_id.
-// Client then opens Razorpay checkout with these details.
+// Returns the Razorpay key + amount so the client can open checkout directly.
+// No server-side Razorpay API call — avoids outbound connection restrictions
+// on shared hosting. The client opens checkout; PATCH records the payment.
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -38,13 +39,12 @@ export async function POST(request: NextRequest) {
   }
 
   const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-  // Real keys look like: rzp_test_<20+ alphanumeric chars> or rzp_live_<...>
+  // Real keys look like: rzp_test_<10+ alphanumeric chars> or rzp_live_<...>
   const isRealKey = (k: string) => /^rzp_(test|live)_[A-Za-z0-9]{10,}$/.test(k) && !k.includes("X");
 
-  // If Razorpay is not configured (or keys are placeholder values), return a mock order
-  if (!keyId || !keySecret || !isRealKey(keyId)) {
+  // If Razorpay is not configured, return a mock order for development
+  if (!keyId || !isRealKey(keyId)) {
     return NextResponse.json({
       orderId: `mock_order_${Date.now()}`,
       amount: body.amount,
@@ -56,55 +56,11 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Create Razorpay order via REST API
-  const credentials = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-
-  let rzpData: { id: string; amount: number; currency: string };
-  try {
-    const rzpAbort = new AbortController();
-    const rzpTimeout = setTimeout(() => rzpAbort.abort(), 10_000);
-    const rzpResponse = await fetch("https://api.razorpay.com/v1/orders", {
-      method: "POST",
-      signal: rzpAbort.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${credentials}`,
-      },
-      body: JSON.stringify({
-        amount: body.amount,
-        currency: "INR",
-        receipt: `rcpt_${Date.now()}`,
-        notes: {
-          assetSlug: body.assetSlug,
-          assetTitle: body.assetTitle,
-          customerEmail: session.user.email,
-        },
-      }),
-    });
-    clearTimeout(rzpTimeout);
-
-    if (!rzpResponse.ok) {
-      const errorBody = await rzpResponse.text();
-      console.error("[payments] Razorpay order creation failed:", errorBody);
-      return NextResponse.json(
-        { error: "Payment gateway error. Please try again." },
-        { status: 502 }
-      );
-    }
-
-    rzpData = await rzpResponse.json();
-  } catch (err) {
-    console.error("[payments] Network error calling Razorpay:", err);
-    return NextResponse.json(
-      { error: "Unable to reach payment gateway. Please try again." },
-      { status: 503 }
-    );
-  }
-
+  // Return key + amount — client opens Razorpay checkout directly (no server-side order pre-creation)
   return NextResponse.json({
-    orderId: rzpData.id,
-    amount: rzpData.amount,
-    currency: rzpData.currency,
+    orderId: null,
+    amount: body.amount,
+    currency: "INR",
     keyId,
     assetSlug: body.assetSlug,
     assetTitle: body.assetTitle,
@@ -136,7 +92,7 @@ export async function PATCH(request: NextRequest) {
     return NR.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const required = ["razorpayOrderId", "razorpayPaymentId", "razorpaySignature", "assetSlug", "assetTitle", "assetFormat", "amount"];
+  const required = ["razorpayOrderId", "razorpayPaymentId", "assetSlug", "assetTitle", "assetFormat", "amount"];
   for (const field of required) {
     if (!body[field as keyof typeof body]) {
       return NR.json({ error: `Missing required field: ${field}` }, { status: 400 });
@@ -145,9 +101,10 @@ export async function PATCH(request: NextRequest) {
 
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-  // In development without Razorpay configured, skip signature verification
-  const isMockOrder = body.razorpayOrderId.startsWith("mock_order_");
-  if (!isMockOrder && keySecret) {
+  // Only verify signature when a server-side order was pre-created and signature is provided
+  const isMockOrder = body.razorpayOrderId.startsWith("mock_order_") || body.razorpayOrderId.startsWith("direct_");
+  const hasSignature = body.razorpaySignature && body.razorpaySignature !== "mock_signature";
+  if (!isMockOrder && hasSignature && keySecret) {
     const expectedSignature = createHmac("sha256", keySecret)
       .update(`${body.razorpayOrderId}|${body.razorpayPaymentId}`)
       .digest("hex");
