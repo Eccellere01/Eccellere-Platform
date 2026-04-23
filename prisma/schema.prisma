@@ -179,6 +179,11 @@ model Asset {
   authorId String
   author   SpecialistProfile @relation(fields: [authorId], references: [id])
 
+  // Structured marketplace listing sections (populated by AI or manually by specialist)
+  aboutResource    String?  @db.Text  // "About This Resource" narrative paragraph
+  whatIncluded     Json?              // string[] — bullet list of deliverables
+  contentsPreview  Json?              // string[] — bullet list of sections/chapters
+
   reviewNotes    String?
   reviewedBy     String?
   averageRating  Float?  @default(0)

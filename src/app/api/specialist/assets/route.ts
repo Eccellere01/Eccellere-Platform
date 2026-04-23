@@ -90,6 +90,12 @@ export async function GET() {
       totalViews: true,
       averageRating: true,
       createdAt: true,
+      serviceDomain: true,
+      targetAudience: true,
+      tags: true,
+      aboutResource: true,
+      whatIncluded: true,
+      contentsPreview: true,
     },
   });
 
@@ -168,13 +174,15 @@ export async function POST(req: NextRequest) {
   const category = (formData.get("category") as string | null)?.trim();
   const format = (formData.get("format") as string | null)?.trim();
   const price = (formData.get("price") as string | null)?.trim();
-  const description = (formData.get("description") as string | null)?.trim();
+  const aboutResource = (formData.get("aboutResource") as string | null)?.trim() || null;
+  const whatIncludedRaw = (formData.get("whatIncluded") as string | null) || "[]";
+  const contentsPreviewRaw = (formData.get("contentsPreview") as string | null) || "[]";
   const targetAudience = (formData.get("targetAudience") as string | null)?.trim() || null;
   const tagsRaw = (formData.get("tags") as string | null) || "[]";
   const file = formData.get("file") as File | null;
 
   // Validate required fields
-  if (!title || !tagline || !category || !format || !price || !description) {
+  if (!title || !tagline || !category || !format || !price || !aboutResource) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -189,6 +197,22 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(tags)) tags = [];
   } catch {
     tags = [];
+  }
+
+  let whatIncluded: string[] = [];
+  try {
+    whatIncluded = JSON.parse(whatIncludedRaw);
+    if (!Array.isArray(whatIncluded)) whatIncluded = [];
+  } catch {
+    whatIncluded = [];
+  }
+
+  let contentsPreview: string[] = [];
+  try {
+    contentsPreview = JSON.parse(contentsPreviewRaw);
+    if (!Array.isArray(contentsPreview)) contentsPreview = [];
+  } catch {
+    contentsPreview = [];
   }
 
   // Handle file upload
@@ -222,7 +246,10 @@ export async function POST(req: NextRequest) {
     data: {
       slug,
       title,
-      description,
+      description: aboutResource,
+      aboutResource,
+      whatIncluded,
+      contentsPreview,
       category: (CATEGORY_MAP[category] ?? "PLAYBOOK") as never,
       serviceDomain: category,
       targetSectors: [],
@@ -239,4 +266,93 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ success: true, assetId: asset.id });
+}
+
+// ─── PUT /api/specialist/assets — edit metadata on an existing asset ──────────
+export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user?.role !== "SPECIALIST" && session.user?.role !== "SPECIALIST_ADMIN")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const assetId = (body.assetId as string | undefined)?.trim();
+  if (!assetId) {
+    return NextResponse.json({ error: "assetId is required" }, { status: 400 });
+  }
+
+  // Verify ownership
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email! },
+    select: { specialistProfile: { select: { id: true } } },
+  });
+  if (!user?.specialistProfile) {
+    return NextResponse.json({ error: "Specialist profile not found" }, { status: 404 });
+  }
+
+  const asset = await prisma.asset.findFirst({
+    where: { id: assetId, authorId: user.specialistProfile.id },
+    select: { id: true, status: true },
+  });
+  if (!asset) {
+    return NextResponse.json({ error: "Asset not found or not owned by you" }, { status: 404 });
+  }
+
+  // Only allow edits while asset is DRAFT, SUBMITTED, or REJECTED (not after PUBLISHED/APPROVED)
+  const editableStatuses = ["DRAFT", "SUBMITTED", "REJECTED"];
+  if (!editableStatuses.includes(asset.status as string)) {
+    return NextResponse.json(
+      { error: "Published or approved assets cannot be edited. Contact support." },
+      { status: 403 }
+    );
+  }
+
+  // Build update payload from allowed fields only
+  const updateData: Record<string, unknown> = {};
+
+  if (typeof body.title === "string" && body.title.trim()) {
+    updateData.title = body.title.trim().slice(0, 200);
+  }
+  if (typeof body.tagline === "string") {
+    updateData.description = body.tagline.trim().slice(0, 120); // tagline stored in description for backward compat
+  }
+  if (typeof body.price === "number" && body.price >= 0) {
+    updateData.price = Math.round(body.price);
+  }
+  if (typeof body.aboutResource === "string") {
+    updateData.aboutResource = body.aboutResource.trim();
+    updateData.description = body.aboutResource.trim(); // keep description in sync
+  }
+  if (Array.isArray(body.whatIncluded)) {
+    updateData.whatIncluded = (body.whatIncluded as unknown[])
+      .filter((s): s is string => typeof s === "string")
+      .slice(0, 10);
+  }
+  if (Array.isArray(body.contentsPreview)) {
+    updateData.contentsPreview = (body.contentsPreview as unknown[])
+      .filter((s): s is string => typeof s === "string")
+      .slice(0, 10);
+  }
+  if (typeof body.targetAudience === "string") {
+    updateData.targetAudience = body.targetAudience.trim().slice(0, 200);
+  }
+  if (Array.isArray(body.tags)) {
+    updateData.tags = (body.tags as unknown[])
+      .filter((s): s is string => typeof s === "string")
+      .slice(0, 8);
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+  }
+
+  await prisma.asset.update({ where: { id: assetId }, data: updateData });
+
+  return NextResponse.json({ success: true });
 }

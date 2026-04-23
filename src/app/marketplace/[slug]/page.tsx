@@ -43,6 +43,7 @@ async function getAsset(slug: string): Promise<Asset | null> {
       where: { slug },
       select: {
         id: true, slug: true, title: true, description: true,
+        aboutResource: true, whatIncluded: true, contentsPreview: true,
         category: true, serviceDomain: true, targetSectors: true,
         components: true, tags: true, price: true,
         averageRating: true, totalPurchases: true, isFeatured: true,
@@ -57,6 +58,18 @@ async function getAsset(slug: string): Promise<Asset | null> {
       const format = Array.isArray(a.components) && (a.components as unknown[]).length > 0
         ? (a.components as string[])[0]
         : "PDF";
+
+      // Prefer structured fields; fall back to tags for includes, empty for preview
+      const aboutResource = typeof a.aboutResource === "string" && a.aboutResource.trim()
+        ? a.aboutResource
+        : a.description;
+      const includes = Array.isArray(a.whatIncluded) && (a.whatIncluded as unknown[]).length > 0
+        ? (a.whatIncluded as string[])
+        : Array.isArray(a.tags) ? (a.tags as string[]) : [];
+      const dbContentsPreview = Array.isArray(a.contentsPreview) && (a.contentsPreview as unknown[]).length > 0
+        ? (a.contentsPreview as string[])
+        : [];
+
       return {
         id: a.id,
         slug: a.slug,
@@ -64,8 +77,10 @@ async function getAsset(slug: string): Promise<Asset | null> {
         categoryColor: catInfo.color,
         title: a.title,
         description: a.description,
-        longDescription: a.description,
-        includes: Array.isArray(a.tags) ? (a.tags as string[]) : [],
+        longDescription: aboutResource,
+        aboutResource,
+        includes,
+        contentsPreview: dbContentsPreview,
         format,
         price: a.price,
         rating: a.averageRating ?? 0,
@@ -73,7 +88,7 @@ async function getAsset(slug: string): Promise<Asset | null> {
         sectors,
         bestseller: a.isFeatured,
         lastUpdated: new Date(a.updatedAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
-        previewItems: [],
+        previewItems: dbContentsPreview,
       };
     }
   } catch {

@@ -6,7 +6,9 @@ export type Asset = {
   title: string;
   description: string;
   longDescription: string;
+  aboutResource?: string;
   includes: string[];
+  contentsPreview?: string[];
   format: string;
   price: number;
   originalPrice?: number;

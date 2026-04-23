@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Eye, Download, Star, PlusCircle, Upload,
-  CheckCircle2, AlertCircle, Loader2,
+  CheckCircle2, AlertCircle, Loader2, Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -188,6 +188,16 @@ export default function SpecialistAssetsPage() {
                         {asset.totalRevenue > 0 ? `₹${asset.totalRevenue.toLocaleString("en-IN")}` : "—"}
                       </span>
                     </div>
+
+                    {/* Edit listing button */}
+                    <Link
+                      href={`/specialist/assets/${asset.id}/edit`}
+                      title="Edit listing details, description and pricing"
+                      className="flex items-center gap-1.5 rounded border border-eccellere-ink/15 px-3 py-1.5 text-xs font-medium text-ink-mid transition-colors hover:border-eccellere-gold hover:text-eccellere-gold"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </Link>
 
                     {/* Upload / Replace file button */}
                     <button

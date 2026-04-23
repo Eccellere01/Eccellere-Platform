@@ -26,7 +26,9 @@ Always return ONLY a valid JSON object — no prose, no markdown fences — with
   "category": "one of: ${CATEGORIES.join(", ")}",
   "format": "one of: ${FORMATS.join(", ")}",
   "price": "number in INR (e.g. 4999), choose a reasonable price for Indian B2B consulting assets",
-  "description": "string (150-300 words, covers what it contains, the problem it solves, who benefits)",
+  "aboutResource": "string (2-4 sentences, narrative paragraph about what this resource is and why it matters — India-contextualised)",
+  "whatIncluded": ["array of 4-8 strings, each a deliverable item e.g. '100+ categorised business prompts (PDF)'"],
+  "contentsPreview": ["array of 4-8 strings, each a section name e.g. 'Section 1: Sales and business development prompts'"],
   "targetAudience": "string (e.g. MSME founders, CFOs, operations managers)",
   "tags": ["array", "of", "3-8", "relevant", "lowercase", "tags"]
 }`;
@@ -136,7 +138,13 @@ export async function POST(req: NextRequest) {
       ? (parsed.format as string)
       : "PDF",
     price: String(Number(parsed.price) > 0 ? Math.round(Number(parsed.price) / 100) * 100 : 4999),
-    description: typeof parsed.description === "string" ? parsed.description.slice(0, 2000) : "",
+    aboutResource: typeof parsed.aboutResource === "string" ? parsed.aboutResource.slice(0, 2000) : "",
+    whatIncluded: Array.isArray(parsed.whatIncluded)
+      ? (parsed.whatIncluded as unknown[]).filter((t): t is string => typeof t === "string").slice(0, 10)
+      : [],
+    contentsPreview: Array.isArray(parsed.contentsPreview)
+      ? (parsed.contentsPreview as unknown[]).filter((t): t is string => typeof t === "string").slice(0, 10)
+      : [],
     targetAudience:
       typeof parsed.targetAudience === "string" ? parsed.targetAudience.slice(0, 200) : "",
     tags: Array.isArray(parsed.tags)

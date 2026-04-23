@@ -30,7 +30,11 @@ export default function SubmitNewAssetPage() {
     category: "",
     format: "",
     price: "",
-    description: "",
+    aboutResource: "",
+    whatIncluded: [] as string[],
+    contentsPreview: [] as string[],
+    whatIncludedInput: "",
+    contentsPreviewInput: "",
     targetAudience: "",
     tags: [] as string[],
     tagInput: "",
@@ -73,7 +77,9 @@ export default function SubmitNewAssetPage() {
         category: json.category || prev.category,
         format: json.format || prev.format,
         price: json.price || prev.price,
-        description: json.description || prev.description,
+        aboutResource: json.aboutResource || prev.aboutResource,
+        whatIncluded: json.whatIncluded?.length ? json.whatIncluded : prev.whatIncluded,
+        contentsPreview: json.contentsPreview?.length ? json.contentsPreview : prev.contentsPreview,
         targetAudience: json.targetAudience || prev.targetAudience,
         tags: json.tags?.length ? json.tags : prev.tags,
       }));
@@ -103,7 +109,9 @@ export default function SubmitNewAssetPage() {
         category: json.category || prev.category,
         format: json.format || prev.format,
         price: json.price || prev.price,
-        description: json.description || prev.description,
+        aboutResource: json.aboutResource || prev.aboutResource,
+        whatIncluded: json.whatIncluded?.length ? json.whatIncluded : prev.whatIncluded,
+        contentsPreview: json.contentsPreview?.length ? json.contentsPreview : prev.contentsPreview,
         targetAudience: json.targetAudience || prev.targetAudience,
         tags: json.tags?.length ? json.tags : prev.tags,
       }));
@@ -146,6 +154,17 @@ export default function SubmitNewAssetPage() {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
   }
 
+  function addListItem(field: "whatIncluded" | "contentsPreview", inputField: "whatIncludedInput" | "contentsPreviewInput") {
+    const val = form[inputField].trim();
+    if (val && form[field].length < 10) {
+      setForm((prev) => ({ ...prev, [field]: [...prev[field], val], [inputField]: "" }));
+    }
+  }
+
+  function removeListItem(field: "whatIncluded" | "contentsPreview", index: number) {
+    setForm((prev) => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError("");
@@ -157,7 +176,9 @@ export default function SubmitNewAssetPage() {
       data.set("category", form.category);
       data.set("format", form.format);
       data.set("price", form.price);
-      data.set("description", form.description);
+      data.set("aboutResource", form.aboutResource);
+      data.set("whatIncluded", JSON.stringify(form.whatIncluded));
+      data.set("contentsPreview", JSON.stringify(form.contentsPreview));
       data.set("targetAudience", form.targetAudience);
       data.set("tags", JSON.stringify(form.tags));
       if (selectedFile) data.set("file", selectedFile);
@@ -457,36 +478,116 @@ export default function SubmitNewAssetPage() {
               </div>
             </section>
 
-            {/* ── Section 3: Description ── */}
+            {/* ── Section 3: Marketplace Listing ── */}
             <section className="rounded-lg bg-white p-6 shadow-sm">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-eccellere-ink">
-                Description
+                Marketplace Listing
               </h2>
-              <div className="mt-5 space-y-5">
+              <p className="mt-1 text-xs text-ink-light">
+                These three sections appear on your asset&apos;s detail page in the marketplace exactly as you write them.
+              </p>
+              <div className="mt-5 space-y-6">
+
+                {/* About This Resource */}
                 <div>
-                  <label
-                    htmlFor="description"
-                    className="block text-xs font-medium uppercase tracking-wider text-ink-light"
-                  >
-                    Full Description <span className="text-eccellere-error">*</span>
+                  <label htmlFor="aboutResource" className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                    About This Resource <span className="text-eccellere-error">*</span>
                   </label>
+                  <p className="mt-0.5 text-[11px] text-ink-light/70">
+                    2–4 sentences. What does this resource do and why does it matter for Indian businesses?
+                  </p>
                   <textarea
-                    id="description"
-                    name="description"
+                    id="aboutResource"
+                    name="aboutResource"
                     required
-                    rows={6}
-                    value={form.description}
+                    rows={4}
+                    value={form.aboutResource}
                     onChange={handleChange}
-                    placeholder="Describe what this asset contains, what problem it solves, and who benefits most from it..."
+                    placeholder="Save hours every week with 100+ business-ready prompts for ChatGPT, Claude, and Gemini. Unlike generic AI prompt guides, every prompt in this playbook is tested in real Indian business contexts..."
                     className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
                   />
                 </div>
 
+                {/* What's Included */}
                 <div>
-                  <label
-                    htmlFor="targetAudience"
-                    className="block text-xs font-medium uppercase tracking-wider text-ink-light"
-                  >
+                  <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                    What&apos;s Included{" "}
+                    <span className="normal-case tracking-normal text-ink-light/60">(up to 10 items)</span>
+                  </label>
+                  <p className="mt-0.5 text-[11px] text-ink-light/70">
+                    List each deliverable — PDF, template, checklist, access duration, etc.
+                  </p>
+                  <div className="mt-1.5 flex gap-2">
+                    <input
+                      type="text"
+                      name="whatIncludedInput"
+                      value={form.whatIncludedInput}
+                      onChange={handleChange}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addListItem("whatIncluded", "whatIncludedInput"); } }}
+                      placeholder="e.g. 100+ categorised business prompts (PDF)"
+                      className="flex-1 rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => addListItem("whatIncluded", "whatIncludedInput")}>
+                      Add
+                    </Button>
+                  </div>
+                  {form.whatIncluded.length > 0 && (
+                    <ul className="mt-2 space-y-1.5">
+                      {form.whatIncluded.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2 rounded bg-eccellere-cream px-3 py-2 text-sm text-eccellere-ink">
+                          <span className="flex-1">• {item}</span>
+                          <button type="button" onClick={() => removeListItem("whatIncluded", i)} className="text-ink-light hover:text-eccellere-error">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Contents Preview */}
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                    Contents Preview{" "}
+                    <span className="normal-case tracking-normal text-ink-light/60">(up to 10 sections)</span>
+                  </label>
+                  <p className="mt-0.5 text-[11px] text-ink-light/70">
+                    List the main sections or chapters buyers will see before purchasing.
+                  </p>
+                  <div className="mt-1.5 flex gap-2">
+                    <input
+                      type="text"
+                      name="contentsPreviewInput"
+                      value={form.contentsPreviewInput}
+                      onChange={handleChange}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addListItem("contentsPreview", "contentsPreviewInput"); } }}
+                      placeholder="e.g. Section 1: Sales and business development prompts"
+                      className="flex-1 rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => addListItem("contentsPreview", "contentsPreviewInput")}>
+                      Add
+                    </Button>
+                  </div>
+                  {form.contentsPreview.length > 0 && (
+                    <ol className="mt-2 space-y-1.5">
+                      {form.contentsPreview.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2 rounded bg-eccellere-cream px-3 py-2 text-sm text-eccellere-ink">
+                          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-eccellere-gold/10 text-[10px] font-medium text-eccellere-gold">
+                            {i + 1}
+                          </span>
+                          <span className="flex-1">{item}</span>
+                          <button type="button" onClick={() => removeListItem("contentsPreview", i)} className="text-ink-light hover:text-eccellere-error">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+
+                {/* Target Audience */}
+                <div>
+                  <label htmlFor="targetAudience" className="block text-xs font-medium uppercase tracking-wider text-ink-light">
                     Target Audience
                   </label>
                   <input
