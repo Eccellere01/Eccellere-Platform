@@ -38,8 +38,11 @@ export async function POST(request: NextRequest) {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-  // If Razorpay is not configured, return a mock order for development
-  if (!keyId || !keySecret) {
+  // Real keys look like: rzp_test_<20+ alphanumeric chars> or rzp_live_<...>
+  const isRealKey = (k: string) => /^rzp_(test|live)_[A-Za-z0-9]{10,}$/.test(k) && !k.includes("X");
+
+  // If Razorpay is not configured (or keys are placeholder values), return a mock order
+  if (!keyId || !keySecret || !isRealKey(keyId)) {
     return NextResponse.json({
       orderId: `mock_order_${Date.now()}`,
       amount: body.amount,
