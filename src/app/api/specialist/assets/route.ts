@@ -36,6 +36,120 @@ const ALLOWED_TYPES = new Set([
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB — conservative for Hostinger shared hosting
 
+// ─── Shared upload helper ─────────────────────────────────────────────────────
+async function saveUploadedFile(file: File): Promise<string> {
+  const safeName = file.name
+    .replace(/[^\w.\-]/g, "_")
+    .replace(/\.{2,}/g, "_")
+    .slice(0, 200);
+  const uniqueName = `${Date.now()}-${safeName}`;
+
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "assets");
+  if (!existsSync(uploadDir)) {
+    await mkdir(uploadDir, { recursive: true });
+  }
+  const destPath = path.join(uploadDir, uniqueName);
+
+  const nodeReadable = Readable.fromWeb(
+    file.stream() as import("stream/web").ReadableStream
+  );
+  const writeStream = createWriteStream(destPath);
+  await pipeline(nodeReadable, writeStream);
+
+  return `/uploads/assets/${uniqueName}`;
+}
+
+// ─── GET /api/specialist/assets — list the session specialist's own assets ────
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user?.role !== "SPECIALIST" && session.user?.role !== "SPECIALIST_ADMIN")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email! },
+    select: { specialistProfile: { select: { id: true } } },
+  });
+
+  if (!user?.specialistProfile) {
+    return NextResponse.json({ assets: [] });
+  }
+
+  const assets = await prisma.asset.findMany({
+    where: { authorId: user.specialistProfile.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      price: true,
+      components: true,
+      fileUrls: true,
+      totalPurchases: true,
+      totalRevenue: true,
+      totalViews: true,
+      averageRating: true,
+      createdAt: true,
+    },
+  });
+
+  return NextResponse.json({ assets });
+}
+
+// ─── PATCH /api/specialist/assets — attach/replace the file on an existing asset
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user?.role !== "SPECIALIST" && session.user?.role !== "SPECIALIST_ADMIN")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  }
+
+  const assetId = (formData.get("assetId") as string | null)?.trim();
+  const file = formData.get("file") as File | null;
+
+  if (!assetId || !file) {
+    return NextResponse.json({ error: "assetId and file are required" }, { status: 400 });
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json({ error: "File exceeds 25 MB limit" }, { status: 400 });
+  }
+  if (!ALLOWED_TYPES.has(file.type)) {
+    return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+  }
+
+  // Verify the asset belongs to this specialist
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email! },
+    select: { specialistProfile: { select: { id: true } } },
+  });
+  if (!user?.specialistProfile) {
+    return NextResponse.json({ error: "Specialist profile not found" }, { status: 404 });
+  }
+
+  const asset = await prisma.asset.findFirst({
+    where: { id: assetId, authorId: user.specialistProfile.id },
+    select: { id: true },
+  });
+  if (!asset) {
+    return NextResponse.json({ error: "Asset not found or not owned by you" }, { status: 404 });
+  }
+
+  const fileUrl = await saveUploadedFile(file);
+
+  await prisma.asset.update({
+    where: { id: assetId },
+    data: { fileUrls: [fileUrl] },
+  });
+
+  return NextResponse.json({ success: true, fileUrl });
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || (session.user?.role !== "SPECIALIST" && session.user?.role !== "SPECIALIST_ADMIN")) {
@@ -86,28 +200,7 @@ export async function POST(req: NextRequest) {
     if (!ALLOWED_TYPES.has(file.type)) {
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
-
-    // Stream the file directly to disk — avoids loading the whole buffer into RAM.
-    // Sanitize filename — strip any path traversal characters
-    const safeName = file.name
-      .replace(/[^\w.\-]/g, "_")
-      .replace(/\.{2,}/g, "_")
-      .slice(0, 200);
-    const uniqueName = `${Date.now()}-${safeName}`;
-
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "assets");
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-    const destPath = path.join(uploadDir, uniqueName);
-
-    const nodeReadable = Readable.fromWeb(
-      file.stream() as import("stream/web").ReadableStream
-    );
-    const writeStream = createWriteStream(destPath);
-    await pipeline(nodeReadable, writeStream);
-
-    fileUrl = `/uploads/assets/${uniqueName}`;
+    fileUrl = await saveUploadedFile(file);
   }
 
   // Get the specialist profile linked to the session user
