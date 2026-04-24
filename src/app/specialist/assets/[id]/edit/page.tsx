@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Loader2, CheckCircle2, X, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Save, Loader2, CheckCircle2, X, AlertTriangle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const CATEGORIES = [
@@ -46,6 +46,7 @@ export default function EditAssetPage() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [resubmitting, setResubmitting] = useState(false);
   const [assetStatus, setAssetStatus] = useState("");
 
   const [form, setForm] = useState<FormState>({
@@ -123,6 +124,27 @@ export default function EditAssetPage() {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
   }
 
+  async function handleResubmit() {
+    setSaveError("");
+    setResubmitting(true);
+    try {
+      const res = await fetch("/api/specialist/assets", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId, action: "resubmit" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Re-submit failed");
+      setAssetStatus("SUBMITTED");
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setResubmitting(false);
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaveError("");
@@ -157,7 +179,7 @@ export default function EditAssetPage() {
     }
   }
 
-  const editableStatuses = ["DRAFT", "SUBMITTED", "REJECTED"];
+  const editableStatuses = ["DRAFT", "SUBMITTED", "REJECTED", "RECALLED"];
   const canEdit = editableStatuses.includes(assetStatus);
 
   if (loading) {
@@ -205,6 +227,15 @@ export default function EditAssetPage() {
             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <p>
               This asset is <strong>{assetStatus}</strong> and cannot be edited. Contact support if you need to make changes.
+            </p>
+          </div>
+        )}
+
+        {assetStatus === "RECALLED" && (
+          <div className="mt-6 flex items-start gap-2.5 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <p>
+              This asset has been <strong>recalled</strong> and is hidden from the marketplace. Edit the details below, then re-submit for review when ready.
             </p>
           </div>
         )}
@@ -465,16 +496,29 @@ export default function EditAssetPage() {
               {saveSuccess && (
                 <div className="flex items-center gap-2 text-sm text-eccellere-teal">
                   <CheckCircle2 className="h-4 w-4" />
-                  Changes saved successfully.
+                  {assetStatus === "SUBMITTED" ? "Re-submitted for review." : "Changes saved successfully."}
                 </div>
               )}
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Button variant="outline" type="button" onClick={() => router.push("/specialist/assets")}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saving}>
                   {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
                 </Button>
+                {assetStatus === "RECALLED" && (
+                  <Button
+                    type="button"
+                    disabled={resubmitting}
+                    onClick={handleResubmit}
+                    className="bg-eccellere-teal hover:bg-eccellere-teal/90"
+                  >
+                    {resubmitting
+                      ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting…</>
+                      : <><Send className="mr-2 h-4 w-4" />Re-submit for Review</>
+                    }
+                  </Button>
+                )}
               </div>
             </div>
           )}

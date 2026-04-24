@@ -304,11 +304,28 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Asset not found or not owned by you" }, { status: 404 });
   }
 
-  // Only allow edits while asset is DRAFT, SUBMITTED, or REJECTED (not after PUBLISHED/APPROVED)
-  const editableStatuses = ["DRAFT", "SUBMITTED", "REJECTED"];
+  // ── Action: recall (PUBLISHED → RECALLED) or resubmit (RECALLED → SUBMITTED) ──
+  if (body.action === "recall") {
+    if (asset.status !== "PUBLISHED") {
+      return NextResponse.json({ error: "Only published assets can be recalled." }, { status: 403 });
+    }
+    await prisma.asset.update({ where: { id: assetId }, data: { status: "RECALLED" } });
+    return NextResponse.json({ success: true });
+  }
+
+  if (body.action === "resubmit") {
+    if (asset.status !== "RECALLED") {
+      return NextResponse.json({ error: "Only recalled assets can be re-submitted." }, { status: 403 });
+    }
+    await prisma.asset.update({ where: { id: assetId }, data: { status: "SUBMITTED" } });
+    return NextResponse.json({ success: true });
+  }
+
+  // Only allow field edits while asset is DRAFT, SUBMITTED, REJECTED, or RECALLED
+  const editableStatuses = ["DRAFT", "SUBMITTED", "REJECTED", "RECALLED"];
   if (!editableStatuses.includes(asset.status as string)) {
     return NextResponse.json(
-      { error: "Published or approved assets cannot be edited. Contact support." },
+      { error: "This asset cannot be edited in its current status. Recall it first if it is published." },
       { status: 403 }
     );
   }

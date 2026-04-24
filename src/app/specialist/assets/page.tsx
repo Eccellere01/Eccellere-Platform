@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Eye, Download, Star, PlusCircle, Upload,
-  CheckCircle2, AlertCircle, Loader2, Pencil,
+  CheckCircle2, AlertCircle, Loader2, Pencil, RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,12 +30,13 @@ const STATUS_STYLE: Record<string, string> = {
   UNDER_REVIEW:        "bg-blue-50 text-blue-600",
   REVISIONS_REQUESTED: "bg-eccellere-error/10 text-eccellere-error",
   DRAFT:               "bg-ink-light/10 text-ink-light",
+  RECALLED:            "bg-amber-50 text-amber-700",
   RETIRED:             "bg-ink-light/10 text-ink-light",
 };
 const STATUS_LABEL: Record<string, string> = {
   PUBLISHED: "Published", APPROVED: "Approved", SUBMITTED: "Submitted",
   UNDER_REVIEW: "Under Review", REVISIONS_REQUESTED: "Revisions Needed",
-  DRAFT: "Draft", RETIRED: "Retired",
+  DRAFT: "Draft", RECALLED: "Recalled", RETIRED: "Retired",
 };
 
 export default function SpecialistAssetsPage() {
@@ -43,6 +44,7 @@ export default function SpecialistAssetsPage() {
   const [loading, setLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadMsg, setUploadMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null);
+  const [recallingId, setRecallingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingAssetId = useRef<string | null>(null);
 
@@ -64,6 +66,25 @@ export default function SpecialistAssetsPage() {
   function triggerFileUpload(assetId: string) {
     pendingAssetId.current = assetId;
     fileInputRef.current?.click();
+  }
+
+  async function handleRecall(assetId: string) {
+    if (!confirm("Recall this asset? It will be hidden from the marketplace immediately. You can edit it and re-submit for review.")) return;
+    setRecallingId(assetId);
+    try {
+      const res = await fetch("/api/specialist/assets", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId, action: "recall" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Recall failed");
+      await fetchAssets();
+    } catch (err) {
+      setUploadMsg({ id: assetId, ok: false, text: err instanceof Error ? err.message : "Recall failed" });
+    } finally {
+      setRecallingId(null);
+    }
   }
 
   async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
@@ -198,6 +219,21 @@ export default function SpecialistAssetsPage() {
                       <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </Link>
+
+                    {/* Recall button — PUBLISHED only */}
+                    {asset.status === "PUBLISHED" && (
+                      <button
+                        disabled={recallingId === asset.id}
+                        onClick={() => handleRecall(asset.id)}
+                        title="Recall from marketplace to edit pricing or details"
+                        className="flex items-center gap-1.5 rounded border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
+                      >
+                        {recallingId === asset.id
+                          ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Recalling…</>
+                          : <><RotateCcw className="h-3.5 w-3.5" />Recall</>
+                        }
+                      </button>
+                    )}
 
                     {/* Upload / Replace file button */}
                     <button
