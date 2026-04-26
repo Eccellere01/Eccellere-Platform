@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { CheckoutButton } from "@/components/marketplace/CheckoutButton";
-import { AssetPreviewModal } from "@/components/marketplace/AssetPreviewModal";
+import { AssetSamplePreviewModal } from "@/components/marketplace/AssetSamplePreviewModal";
 import type { Asset } from "@/lib/marketplace-data";
 
 interface PurchaseCardProps {
@@ -45,9 +45,13 @@ export function PurchaseCard({ asset, discount }: PurchaseCardProps) {
 
   return (
     <>
-      {previewOpen && (
-        <AssetPreviewModal asset={asset} onClose={() => setPreviewOpen(false)} />
-      )}
+      <AssetSamplePreviewModal
+        slug={asset.slug}
+        title={asset.title}
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        maxPages={5}
+      />
 
       <div className="rounded-lg bg-white p-6 shadow-md">
         {/* Price */}
