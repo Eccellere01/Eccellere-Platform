@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Upload, PlusCircle, X, FileCheck, Sparkles, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Upload, PlusCircle, FileCheck, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const CATEGORIES = [
@@ -31,13 +31,10 @@ export default function SubmitNewAssetPage() {
     format: "",
     price: "",
     aboutResource: "",
-    whatIncluded: [] as string[],
-    contentsPreview: [] as string[],
-    whatIncludedInput: "",
-    contentsPreviewInput: "",
+    whatIncluded: "",
+    contentsPreview: "",
     targetAudience: "",
-    tags: [] as string[],
-    tagInput: "",
+    tags: "",
     termsAccepted: false,
   });
 
@@ -53,12 +50,6 @@ export default function SubmitNewAssetPage() {
   const [aiFilled, setAiFilled] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
 
-  // Fallback: manual text description modal
-  const [showAiModal, setShowAiModal] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [aiError, setAiError] = useState("");
-
   async function analyzeFile(file: File) {
     setIsAnalyzing(true);
     setAnalyzeError("");
@@ -72,6 +63,15 @@ export default function SubmitNewAssetPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Analysis failed");
+      const whatIncludedStr = Array.isArray(json.whatIncluded) && json.whatIncluded.length
+        ? json.whatIncluded.join("\n")
+        : "";
+      const contentsPreviewStr = Array.isArray(json.contentsPreview) && json.contentsPreview.length
+        ? json.contentsPreview.join("\n")
+        : "";
+      const tagsStr = Array.isArray(json.tags) && json.tags.length
+        ? json.tags.join(", ")
+        : "";
       setForm((prev) => ({
         ...prev,
         title: json.title || prev.title,
@@ -80,10 +80,10 @@ export default function SubmitNewAssetPage() {
         format: json.format || prev.format,
         price: json.price || prev.price,
         aboutResource: json.aboutResource || prev.aboutResource,
-        whatIncluded: json.whatIncluded?.length ? json.whatIncluded : prev.whatIncluded,
-        contentsPreview: json.contentsPreview?.length ? json.contentsPreview : prev.contentsPreview,
+        whatIncluded: whatIncludedStr || prev.whatIncluded,
+        contentsPreview: contentsPreviewStr || prev.contentsPreview,
         targetAudience: json.targetAudience || prev.targetAudience,
-        tags: json.tags?.length ? json.tags : prev.tags,
+        tags: tagsStr || prev.tags,
       }));
       if (json.documentExcerpt) setDocumentExcerpt(json.documentExcerpt);
       setAiFilled(true);
@@ -91,40 +91,6 @@ export default function SubmitNewAssetPage() {
       setAnalyzeError(err instanceof Error ? err.message : "Could not analyze file. Please fill the form manually.");
     } finally {
       setIsAnalyzing(false);
-    }
-  }
-
-  async function handleAiGenerate() {
-    setAiError("");
-    setIsGenerating(true);
-    try {
-      const res = await fetch("/api/specialist/assets/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: aiPrompt }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Generation failed");
-      setForm((prev) => ({
-        ...prev,
-        title: json.title || prev.title,
-        tagline: json.tagline || prev.tagline,
-        category: json.category || prev.category,
-        format: json.format || prev.format,
-        price: json.price || prev.price,
-        aboutResource: json.aboutResource || prev.aboutResource,
-        whatIncluded: json.whatIncluded?.length ? json.whatIncluded : prev.whatIncluded,
-        contentsPreview: json.contentsPreview?.length ? json.contentsPreview : prev.contentsPreview,
-        targetAudience: json.targetAudience || prev.targetAudience,
-        tags: json.tags?.length ? json.tags : prev.tags,
-      }));
-      setShowAiModal(false);
-      setAiPrompt("");
-      setAiFilled(true);
-    } catch (err: unknown) {
-      setAiError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-    } finally {
-      setIsGenerating(false);
     }
   }
 
@@ -146,33 +112,27 @@ export default function SubmitNewAssetPage() {
     if (file) analyzeFile(file);
   }
 
-  function addTag() {
-    const tag = form.tagInput.trim();
-    if (tag && !form.tags.includes(tag) && form.tags.length < 8) {
-      setForm((prev) => ({ ...prev, tags: [...prev.tags, tag], tagInput: "" }));
-    }
-  }
-
-  function removeTag(tag: string) {
-    setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }));
-  }
-
-  function addListItem(field: "whatIncluded" | "contentsPreview", inputField: "whatIncludedInput" | "contentsPreviewInput") {
-    const val = form[inputField].trim();
-    if (val && form[field].length < 10) {
-      setForm((prev) => ({ ...prev, [field]: [...prev[field], val], [inputField]: "" }));
-    }
-  }
-
-  function removeListItem(field: "whatIncluded" | "contentsPreview", index: number) {
-    setForm((prev) => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError("");
     setIsSubmitting(true);
     try {
+      const whatIncludedArr = form.whatIncluded
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 10);
+      const contentsPreviewArr = form.contentsPreview
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 10);
+      const tagsArr = form.tags
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 8);
+
       const data = new FormData();
       data.set("title", form.title);
       data.set("tagline", form.tagline);
@@ -180,10 +140,10 @@ export default function SubmitNewAssetPage() {
       data.set("format", form.format);
       data.set("price", form.price);
       data.set("aboutResource", form.aboutResource);
-      data.set("whatIncluded", JSON.stringify(form.whatIncluded));
-      data.set("contentsPreview", JSON.stringify(form.contentsPreview));
+      data.set("whatIncluded", JSON.stringify(whatIncludedArr));
+      data.set("contentsPreview", JSON.stringify(contentsPreviewArr));
       data.set("targetAudience", form.targetAudience);
-      data.set("tags", JSON.stringify(form.tags));
+      data.set("tags", JSON.stringify(tagsArr));
       if (documentExcerpt) data.set("documentExcerpt", documentExcerpt);
       if (selectedFile) data.set("file", selectedFile);
 
@@ -330,14 +290,9 @@ export default function SubmitNewAssetPage() {
                 {analyzeError && (
                   <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                     <p>{analyzeError}</p>
-                    <button
-                      type="button"
-                      onClick={() => { setAnalyzeError(""); setAiError(""); setShowAiModal(true); }}
-                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-eccellere-gold underline-offset-2 hover:underline"
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      Describe your asset manually instead →
-                    </button>
+                    <p className="mt-1.5 text-xs text-amber-700">
+                      You can still fill in the fields below manually and submit.
+                    </p>
                   </div>
                 )}
               </div>
@@ -514,79 +469,42 @@ export default function SubmitNewAssetPage() {
 
                 {/* What's Included */}
                 <div>
-                  <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                  <label htmlFor="whatIncluded" className="block text-xs font-medium uppercase tracking-wider text-ink-light">
                     What&apos;s Included{" "}
-                    <span className="normal-case tracking-normal text-ink-light/60">(up to 10 items)</span>
+                    <span className="normal-case tracking-normal text-ink-light/60">(one item per line, up to 10)</span>
                   </label>
                   <p className="mt-0.5 text-[11px] text-ink-light/70">
-                    List each deliverable — PDF, template, checklist, access duration, etc.
+                    List each deliverable on a new line — PDF, template, checklist, access duration, etc.
                   </p>
-                  <div className="mt-1.5 flex gap-2">
-                    <input
-                      type="text"
-                      name="whatIncludedInput"
-                      value={form.whatIncludedInput}
-                      onChange={handleChange}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addListItem("whatIncluded", "whatIncludedInput"); } }}
-                      placeholder="e.g. 100+ categorised business prompts (PDF)"
-                      className="flex-1 rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={() => addListItem("whatIncluded", "whatIncludedInput")}>
-                      Add
-                    </Button>
-                  </div>
-                  {form.whatIncluded.length > 0 && (
-                    <ul className="mt-2 space-y-1.5">
-                      {form.whatIncluded.map((item, i) => (
-                        <li key={i} className="flex items-center gap-2 rounded bg-eccellere-cream px-3 py-2 text-sm text-eccellere-ink">
-                          <span className="flex-1">• {item}</span>
-                          <button type="button" onClick={() => removeListItem("whatIncluded", i)} className="text-ink-light hover:text-eccellere-error">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <textarea
+                    id="whatIncluded"
+                    name="whatIncluded"
+                    rows={6}
+                    value={form.whatIncluded}
+                    onChange={handleChange}
+                    placeholder={"100+ categorised business prompts (PDF)\n35-KPI benchmarking dashboard\n10 strategic initiative templates"}
+                    className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                  />
                 </div>
 
                 {/* Contents Preview */}
                 <div>
-                  <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                  <label htmlFor="contentsPreview" className="block text-xs font-medium uppercase tracking-wider text-ink-light">
                     Contents Preview{" "}
-                    <span className="normal-case tracking-normal text-ink-light/60">(up to 10 sections)</span>
+                    <span className="normal-case tracking-normal text-ink-light/60">(one section per line, up to 10)</span>
                   </label>
                   <p className="mt-0.5 text-[11px] text-ink-light/70">
                     List the main sections or chapters buyers will see before purchasing.
                   </p>
-                  <div className="mt-1.5 flex gap-2">
-                    <input
-                      type="text"
-                      name="contentsPreviewInput"
-                      value={form.contentsPreviewInput}
-                      onChange={handleChange}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addListItem("contentsPreview", "contentsPreviewInput"); } }}
-                      placeholder="e.g. Section 1: Sales and business development prompts"
-                      className="flex-1 rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={() => addListItem("contentsPreview", "contentsPreviewInput")}>
-                      Add
-                    </Button>
-                  </div>
-                  {form.contentsPreview.length > 0 && (
-                    <ol className="mt-2 space-y-1.5">
-                      {form.contentsPreview.map((item, i) => (
-                        <li key={i} className="flex items-center gap-2 rounded bg-eccellere-cream px-3 py-2 text-sm text-eccellere-ink">
-                          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-eccellere-gold/10 text-[10px] font-medium text-eccellere-gold">
-                            {i + 1}
-                          </span>
-                          <span className="flex-1">{item}</span>
-                          <button type="button" onClick={() => removeListItem("contentsPreview", i)} className="text-ink-light hover:text-eccellere-error">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </li>
-                      ))}
-                    </ol>
-                  )}
+                  <textarea
+                    id="contentsPreview"
+                    name="contentsPreview"
+                    rows={6}
+                    value={form.contentsPreview}
+                    onChange={handleChange}
+                    placeholder={"Section 1: Sales and business development prompts\nSection 2: Operations and supply chain\nSection 3: Finance and working capital"}
+                    className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                  />
                 </div>
 
                 {/* Target Audience */}
@@ -607,50 +525,21 @@ export default function SubmitNewAssetPage() {
 
                 {/* Tags */}
                 <div>
-                  <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                  <label htmlFor="tags" className="block text-xs font-medium uppercase tracking-wider text-ink-light">
                     Tags{" "}
                     <span className="normal-case tracking-normal text-ink-light/60">
-                      (up to 8)
+                      (comma-separated, up to 8)
                     </span>
                   </label>
-                  <div className="mt-1.5 flex gap-2">
-                    <input
-                      type="text"
-                      name="tagInput"
-                      value={form.tagInput}
-                      onChange={handleChange}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addTag();
-                        }
-                      }}
-                      placeholder="Type a tag and press Enter"
-                      className="flex-1 rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={addTag}>
-                      Add
-                    </Button>
-                  </div>
-                  {form.tags.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {form.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center gap-1 rounded-sm bg-gold-pale px-2 py-0.5 text-xs text-eccellere-ink"
-                        >
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            className="text-ink-light hover:text-eccellere-error"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <input
+                    id="tags"
+                    name="tags"
+                    type="text"
+                    value={form.tags}
+                    onChange={handleChange}
+                    placeholder="e.g. inventory management, working capital, msme, india, diagnostic toolkit"
+                    className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                  />
                 </div>
               </div>
             </section>
@@ -698,61 +587,6 @@ export default function SubmitNewAssetPage() {
           </form>
         </div>
       </div>
-
-      {/* ── AI Fill Modal ── */}
-      {showAiModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-eccellere-gold" />
-                <h2 className="text-base font-semibold text-eccellere-ink">AI Fill</h2>
-              </div>
-              <button
-                onClick={() => setShowAiModal(false)}
-                className="rounded p-1 text-ink-light hover:text-eccellere-ink"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="mt-2 text-sm text-ink-mid">
-              Describe your asset in your own words — what it covers, who it&apos;s for, and
-              what problem it solves. The AI will generate a complete draft for you to review
-              before submitting.
-            </p>
-            <textarea
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              rows={6}
-              placeholder="e.g. A step-by-step playbook I built for MSME manufacturers looking to reduce waste on their production floor. It covers lean assessment, value stream mapping, and a 90-day implementation roadmap. Includes Excel templates for tracking OEE and a PowerPoint for team communication."
-              className="mt-4 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink placeholder:text-ink-light/60 focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-            />
-            <p className="mt-1 text-right text-[11px] text-ink-light">{aiPrompt.length}/2000</p>
-            {aiError && (
-              <p className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {aiError}
-              </p>
-            )}
-            <div className="mt-4 flex items-center justify-end gap-3">
-              <Button variant="outline" size="sm" onClick={() => setShowAiModal(false)} disabled={isGenerating}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleAiGenerate}
-                disabled={isGenerating || aiPrompt.trim().length < 20}
-                className="gap-2"
-              >
-                {isGenerating ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
-                ) : (
-                  <><Sparkles className="h-4 w-4" /> Generate Draft</>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

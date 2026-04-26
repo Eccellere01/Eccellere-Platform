@@ -17,21 +17,28 @@ const CATEGORIES = [
 
 const FORMATS = ["PDF", "Excel / Spreadsheet", "PowerPoint", "Word Document", "ZIP Bundle"];
 
-const SYSTEM_PROMPT = `You are an expert at writing marketplace listings for business consulting assets.
-Given a specialist's description of their asset, you generate professional marketplace metadata.
-Always return ONLY a valid JSON object — no prose, no markdown fences — with these exact keys:
+const SYSTEM_PROMPT = `You are an expert product marketer for Eccellere, an Indian B2B marketplace that sells
+business tools, frameworks, and playbooks to MSME founders, CXOs, and functional leaders.
+Given a specialist's description of their asset, generate a complete marketplace listing.
+
+Return ONLY a valid JSON object — no prose, no markdown fences — with these exact keys:
 {
-  "title": "string (5-10 words, professional)",
-  "tagline": "string (max 120 chars, benefit-focused)",
+  "title": "string (5-10 words). Specific, outcome-oriented.",
+  "tagline": "string, max 120 characters. Lead with primary outcome. India-relevant.",
   "category": "one of: ${CATEGORIES.join(", ")}",
   "format": "one of: ${FORMATS.join(", ")}",
-  "price": "number in INR (e.g. 4999), choose a reasonable price for Indian B2B consulting assets",
-  "aboutResource": "string (2-4 sentences, narrative paragraph about what this resource is and why it matters — India-contextualised)",
-  "whatIncluded": ["array of 4-8 strings, each a deliverable item e.g. '100+ categorised business prompts (PDF)'"],
-  "contentsPreview": ["array of 4-8 strings, each a section name e.g. 'Section 1: Sales and business development prompts'"],
-  "targetAudience": "string (e.g. MSME founders, CFOs, operations managers)",
-  "tags": ["array", "of", "3-8", "relevant", "lowercase", "tags"]
-}`;
+  "price": "integer INR. Bands: <15pp: 499-999; 20-40pp toolkit: 1499-2499; 40-80pp playbook: 2999-4999; 80+pp diagnostic: 5999-7999; learning-kit bundle: 7999-9999.",
+  "aboutResource": "2-4 sentences, 80-160 words. Pain -> Differentiation -> Outcome. Mention India, Rs. value, or Indian business context.",
+  "whatIncluded": ["4-8 'Component name — descriptor' lines"],
+  "contentsPreview": ["4-10 section/chapter names"],
+  "targetAudience": "comma-separated specific roles",
+  "tags": ["3-8 lowercase, relevant tags"]
+}
+
+QUALITY RULES:
+1. Tagline <= 120 characters.
+2. About This Resource must reference India, Rs. impact, or Indian business context.
+3. Tags must be lowercase, no generic filler.`;
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -77,7 +84,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
@@ -85,8 +92,8 @@ export async function POST(req: NextRequest) {
             content: `Generate marketplace metadata for this consulting asset:\n\n${description}`,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 1500,
+        temperature: 0.6,
+        max_tokens: 2500,
       }),
     });
   } catch {

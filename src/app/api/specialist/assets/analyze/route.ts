@@ -17,21 +17,33 @@ const CATEGORIES = [
 
 const FORMATS = ["PDF", "Excel / Spreadsheet", "PowerPoint", "Word Document", "ZIP Bundle"];
 
-const SYSTEM_PROMPT = `You are an expert at writing marketplace listings for business consulting assets.
-Given the extracted text content of a consulting asset file, you generate professional marketplace metadata.
-Always return ONLY a valid JSON object — no prose, no markdown fences — with these exact keys:
+const SYSTEM_PROMPT = `You are an expert product marketer for Eccellere, an Indian B2B marketplace that sells
+business tools, frameworks, and playbooks to MSME founders, CXOs, and functional leaders.
+Given the extracted text content of a consulting asset file, generate a complete marketplace listing.
+
+Return ONLY a valid JSON object — no prose, no markdown fences — with these exact keys:
 {
-  "title": "string (5-10 words, professional)",
-  "tagline": "string (max 120 chars, benefit-focused)",
+  "title": "string (5-10 words). Specific, outcome-oriented, capitalise key words. e.g. 'Retail Inventory Optimisation Toolkit' not 'Inventory Guide'.",
+  "tagline": "string, max 120 characters. Lead with primary outcome/benefit. India-relevant. No jargon.",
   "category": "one of: ${CATEGORIES.join(", ")}",
   "format": "one of: ${FORMATS.join(", ")}",
-  "price": "number in INR (e.g. 4999), choose a reasonable price for Indian B2B consulting assets",
-  "aboutResource": "string (2-4 sentences, narrative paragraph about what this resource is and why it matters — India-contextualised)",
-  "whatIncluded": ["array of 4-8 strings, each a deliverable item e.g. '100+ categorised business prompts (PDF)'"],
-  "contentsPreview": ["array of 4-8 strings, each a section name e.g. 'Section 1: Sales and business development prompts'"],
-  "targetAudience": "string (e.g. MSME founders, CFOs, operations managers)",
-  "tags": ["array", "of", "3-8", "relevant", "lowercase", "tags"]
-}`;
+  "price": "integer INR. Use these bands by depth: <15 pages: 499-999. 20-40 pages focused toolkit: 1499-2499. 40-80 pages comprehensive playbook: 2999-4999. 80+ pages full diagnostic kit: 5999-7999. Learning kit bundle: 7999-9999. Premium bundle: 9999-14999.",
+  "aboutResource": "2-4 sentences, 80-160 words. Structure: (1) the pain/problem this solves, (2) what the resource does and how it differs from generic alternatives, (3) the specific outcome or transformation. Mention India context, Rs. impact, or time-saving where credible.",
+  "whatIncluded": ["4-8 strings. Each a discrete deliverable component. Format: 'Component name — brief descriptor'. e.g. '90-point value scan checklist — rate practices vs best-in-class'. Map to real sections in the document; do not invent."],
+  "contentsPreview": ["4-10 strings. Main sections/chapters/modules using actual heading names from the document. Format: 'Section 1: Heading' or just the heading. Word-for-word from document where possible."],
+  "targetAudience": "comma-separated specific roles. e.g. 'MSME founders, Operations managers, Supply chain heads, CFOs'. No generic 'anyone'.",
+  "tags": ["3-8 lowercase tags from document themes, industry, function and document type. e.g. 'inventory management', 'working capital', 'msme', 'india', 'diagnostic toolkit'. No filler like 'business' or 'tool'."]
+}
+
+QUALITY RULES:
+1. Tagline must be <= 120 characters — count carefully.
+2. About This Resource MUST mention India, Rs. savings/value, or Indian business context.
+3. What's Included items must map to real sections visible in the document — do not invent.
+4. Contents Preview headings should match document headings closely.
+5. Tags must be lowercase and relevant.
+6. If the document is a diagnostic/assessment, emphasise self-scoring, benchmarks, action planning.
+7. If the document is a playbook/toolkit, emphasise step-by-step implementation and ready-to-use templates.
+8. If the document is a learning kit, emphasise skill-building, exercises, and outcomes.`;
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -116,8 +128,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Truncate to ~4000 chars to stay within token limits
-  const contentForAI = trimmed.slice(0, 4000);
+  // Truncate to ~16000 chars to stay within token limits while preserving section structure
+  const contentForAI = trimmed.slice(0, 16000);
 
   let groqResponse: Response;
   try {
@@ -128,7 +140,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
@@ -136,8 +148,8 @@ export async function POST(req: NextRequest) {
             content: `Analyze the following extracted content from a consulting asset file and generate professional marketplace metadata:\n\n${contentForAI}`,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 1500,
+        temperature: 0.6,
+        max_tokens: 2500,
       }),
     });
   } catch {
