@@ -117,7 +117,8 @@ export async function POST(request: NextRequest) {
   const isProduction = process.env.EMAIL_PROVIDER === "ses";
 
   if (isProduction) {
-    const nodemailer = require("nodemailer") as typeof import("nodemailer");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nodemailer = require("nodemailer") as any;
     const { SESClient, SendRawEmailCommand } = await import("@aws-sdk/client-ses");
 
     // Build MIME message via nodemailer (stream transport), then send raw via SES
