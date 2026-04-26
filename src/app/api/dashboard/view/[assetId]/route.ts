@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 // Streams the purchased asset file for inline browser viewing (not forced download).
 // Identical auth logic to download route; differs only in Content-Disposition header.
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ assetId: string }> }
 ) {
   const session = await getServerSession(authOptions);
@@ -94,28 +94,14 @@ export async function GET(
 
     const ext = path.extname(absPath).toLowerCase();
 
-    // ── Office docs (DOCX/DOC/XLSX/XLS/PPTX/PPT) → embed Microsoft Office  ──
-    // Online viewer in an iframe. Gives pixel-perfect rendering with original
-    // formatting. Microsoft's servers fetch the file via a short-lived
-    // HMAC-signed public URL, so the file stays auth-protected.
-    const officeExts = new Set([".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt"]);
-    if (officeExts.has(ext)) {
+    // ── DOCX → client-side render with docx-preview (loaded from CDN) ───────
+    // Office Online and Google Docs both block iframe embedding via
+    // X-Frame-Options. docx-preview runs entirely in the browser, downloads
+    // the file from our authenticated /api/files/asset/<token> endpoint, and
+    // renders it preserving fonts/tables/images/colors.
+    if (ext === ".docx") {
       const token = signAssetToken(assetId, user.id);
-
-      // Determine origin for the public file URL Microsoft will fetch.
-      // Prefer NEXT_PUBLIC_SITE_URL; fall back to the request's host.
-      const envOrigin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
-      const reqUrl = new URL(request.url);
-      const reqOrigin =
-        request.headers.get("x-forwarded-host")
-          ? `${request.headers.get("x-forwarded-proto") ?? "https"}://${request.headers.get("x-forwarded-host")}`
-          : `${reqUrl.protocol}//${reqUrl.host}`;
-      const origin = envOrigin || reqOrigin;
-
-      const publicFileUrl = `${origin}/api/files/asset/${token}`;
-      const viewerUrl =
-        `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(publicFileUrl)}`;
-
+      const fileUrl = `/api/files/asset/${token}`;
       const safeTitle = asset.title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const html = `<!DOCTYPE html>
 <html lang="en">
@@ -124,20 +110,67 @@ export async function GET(
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${safeTitle}</title>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; background: #f3f4f6; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-    .viewer-frame { width: 100%; height: 100vh; border: 0; display: block; }
-    .fallback { padding: 24px; max-width: 720px; margin: 40px auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
-    .fallback h2 { margin-top: 0; color: #1f3864; }
-    .fallback a { color: #0563c1; }
+    html, body { margin: 0; padding: 0; min-height: 100vh; background: #f3f4f6; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #1a1a1a; }
+    .topbar { background: #1f3864; color: #fff; padding: 10px 20px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+    .topbar h1 { margin: 0; font-size: 15px; font-weight: 500; }
+    .topbar a { color: #c7d2e0; text-decoration: none; font-size: 13px; }
+    .topbar a:hover { color: #fff; text-decoration: underline; }
+    #viewer { max-width: 1000px; margin: 24px auto; padding: 0 16px 60px; }
+    #viewer .docx-wrapper { background: transparent !important; padding: 0 !important; }
+    #viewer .docx-wrapper > section.docx { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.04); margin-bottom: 16px; background: #fff !important; }
+    #status { text-align: center; padding: 80px 20px; color: #6b7280; font-size: 15px; }
+    #status .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #1f3864; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { max-width: 540px; margin: 80px auto; padding: 24px; background: #fff; border: 1px solid #fecaca; border-radius: 8px; color: #991b1b; }
+    .error-box h2 { margin-top: 0; color: #991b1b; }
+    .error-box a { color: #0563c1; }
   </style>
 </head>
 <body>
-  <iframe class="viewer-frame" src="${viewerUrl}" allowfullscreen></iframe>
+  <div class="topbar">
+    <h1>${safeTitle}</h1>
+    <a href="javascript:window.print()">Print</a>
+  </div>
+  <div id="status"><div class="spinner"></div><div>Loading document…</div></div>
+  <div id="viewer"></div>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.6/dist/docx-preview.min.js"></script>
+  <script>
+    (async function () {
+      var status = document.getElementById('status');
+      var viewer = document.getElementById('viewer');
+      try {
+        var resp = await fetch(${JSON.stringify(fileUrl)}, { credentials: 'same-origin' });
+        if (!resp.ok) throw new Error('Failed to fetch file: HTTP ' + resp.status);
+        var blob = await resp.blob();
+        if (typeof window.docx === 'undefined' || !window.docx.renderAsync) {
+          throw new Error('Viewer library failed to load');
+        }
+        await window.docx.renderAsync(blob, viewer, null, {
+          className: 'docx',
+          inWrapper: true,
+          ignoreWidth: false,
+          ignoreHeight: false,
+          ignoreFonts: false,
+          breakPages: true,
+          ignoreLastRenderedPageBreak: true,
+          experimental: true,
+          trimXmlDeclaration: true,
+          useBase64URL: true,
+          renderHeaders: true,
+          renderFooters: true,
+          renderFootnotes: true
+        });
+        status.style.display = 'none';
+      } catch (err) {
+        status.innerHTML = '<div class="error-box"><h2>Could not load document</h2><p>' + (err && err.message ? err.message : 'Unknown error') + '</p><p><a href="/api/dashboard/download/' + ${JSON.stringify(assetId)} + '">Try downloading the file</a> if download is enabled for your purchase.</p></div>';
+      }
+    })();
+  </script>
   <noscript>
-    <div class="fallback">
+    <div class="error-box">
       <h2>${safeTitle}</h2>
-      <p>JavaScript is required to view this document inline.
-      You can still <a href="/api/dashboard/download/${assetId}">download the file</a> if downloading is enabled for your purchase.</p>
+      <p>JavaScript is required to view this document inline. You can still <a href="/api/dashboard/download/${assetId}">download the file</a> if downloading is enabled for your purchase.</p>
     </div>
   </noscript>
 </body>
@@ -147,14 +180,14 @@ export async function GET(
         headers: {
           "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": "private, no-store",
-          // Override the global strict CSP so the Google Docs viewer iframe loads.
+          // Allow loading docx-preview + jszip from jsDelivr CDN.
           "Content-Security-Policy":
             "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline'; " +
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
             "style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data: blob: https:; " +
-            "frame-src https://docs.google.com https://*.google.com https://view.officeapps.live.com https://*.officeapps.live.com; " +
-            "connect-src 'self' https:; " +
+            "font-src 'self' data: https:; " +
+            "connect-src 'self'; " +
             "frame-ancestors 'self';",
         },
       });
