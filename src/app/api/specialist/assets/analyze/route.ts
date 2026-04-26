@@ -188,5 +188,7 @@ export async function POST(req: NextRequest) {
     contentsPreview: Array.isArray(parsed.contentsPreview) ? parsed.contentsPreview.slice(0, 10) : [],
     targetAudience: typeof parsed.targetAudience === "string" ? parsed.targetAudience : "",
     tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 8) : [],
+    // First ~800 clean chars of extracted document text — stored as the marketplace preview excerpt
+    documentExcerpt: trimmed.slice(0, 800).replace(/\s{2,}/g, " ").trim(),
   });
 }

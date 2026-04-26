@@ -43,7 +43,7 @@ async function getAsset(slug: string): Promise<Asset | null> {
       where: { slug },
       select: {
         id: true, slug: true, title: true, description: true,
-        aboutResource: true, whatIncluded: true, contentsPreview: true,
+        aboutResource: true, whatIncluded: true, contentsPreview: true, documentExcerpt: true,
         category: true, serviceDomain: true, targetSectors: true,
         components: true, tags: true, price: true,
         averageRating: true, totalPurchases: true, isFeatured: true,
@@ -89,6 +89,7 @@ async function getAsset(slug: string): Promise<Asset | null> {
         bestseller: a.isFeatured,
         lastUpdated: new Date(a.updatedAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
         previewItems: dbContentsPreview,
+        documentExcerpt: typeof a.documentExcerpt === "string" && a.documentExcerpt.trim() ? a.documentExcerpt.trim() : undefined,
       };
     }
   } catch {
@@ -207,16 +208,37 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ sl
               {/* Preview */}
               <div className="mt-8 border-t border-eccellere-ink/5 pt-8">
                 <h2 className="font-display text-xl font-light text-eccellere-ink">Contents preview</h2>
-                <div className="mt-4 space-y-2">
-                  {asset.previewItems.map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 rounded bg-white p-3 text-sm text-ink-mid shadow-sm">
-                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-eccellere-gold/10 text-xs font-medium text-eccellere-gold">
-                        {i + 1}
-                      </span>
-                      {item}
+                {asset.documentExcerpt ? (
+                  <div className="mt-4 overflow-hidden rounded-lg border border-eccellere-ink/10 bg-white shadow-sm">
+                    {/* Fake document chrome */}
+                    <div className="flex items-center gap-1.5 border-b border-eccellere-ink/8 bg-eccellere-ink/[0.03] px-4 py-2.5">
+                      <FileText className="h-3.5 w-3.5 text-ink-light" />
+                      <span className="text-xs text-ink-light">Document excerpt · first page</span>
+                      <span className="ml-auto rounded-full bg-eccellere-gold/15 px-2 py-0.5 text-[10px] font-medium text-eccellere-gold">Preview only</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="relative px-6 py-5">
+                      <p className="whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-ink-mid">
+                        {asset.documentExcerpt}
+                      </p>
+                      {/* Fade-out bottom */}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
+                    </div>
+                    <div className="border-t border-eccellere-ink/8 px-6 py-3 text-center">
+                      <span className="text-xs text-ink-light">Purchase to access the full document</span>
+                    </div>
+                  </div>
+                ) : asset.previewItems.length > 0 ? (
+                  <div className="mt-4 space-y-2">
+                    {asset.previewItems.map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 rounded bg-white p-3 text-sm text-ink-mid shadow-sm">
+                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-eccellere-gold/10 text-xs font-medium text-eccellere-gold">
+                          {i + 1}
+                        </span>
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               {/* Trust signals */}

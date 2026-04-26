@@ -179,6 +179,7 @@ export async function POST(req: NextRequest) {
   const contentsPreviewRaw = (formData.get("contentsPreview") as string | null) || "[]";
   const targetAudience = (formData.get("targetAudience") as string | null)?.trim() || null;
   const tagsRaw = (formData.get("tags") as string | null) || "[]";
+  const documentExcerpt = (formData.get("documentExcerpt") as string | null)?.trim() || null;
   const file = formData.get("file") as File | null;
 
   // Validate required fields
@@ -260,6 +261,7 @@ export async function POST(req: NextRequest) {
       components: [format],
       fileUrls: fileUrl ? [fileUrl] : [],
       previewImages: [],
+      documentExcerpt,
       status: "SUBMITTED",
       authorId: user.specialistProfile.id,
     },

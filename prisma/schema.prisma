@@ -183,6 +183,7 @@ model Asset {
   aboutResource    String?  @db.Text  // "About This Resource" narrative paragraph
   whatIncluded     Json?              // string[] — bullet list of deliverables
   contentsPreview  Json?              // string[] — bullet list of sections/chapters
+  documentExcerpt  String?  @db.Text  // Raw text excerpt from the uploaded document (first ~800 chars)
 
   reviewNotes    String?
   reviewedBy     String?

@@ -9,6 +9,7 @@ export type Asset = {
   aboutResource?: string;
   includes: string[];
   contentsPreview?: string[];
+  documentExcerpt?: string;
   format: string;
   price: number;
   originalPrice?: number;

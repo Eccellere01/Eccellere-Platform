@@ -46,6 +46,8 @@ export default function SubmitNewAssetPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  const [documentExcerpt, setDocumentExcerpt] = useState("");
+
   // AI file analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiFilled, setAiFilled] = useState(false);
@@ -83,6 +85,7 @@ export default function SubmitNewAssetPage() {
         targetAudience: json.targetAudience || prev.targetAudience,
         tags: json.tags?.length ? json.tags : prev.tags,
       }));
+      if (json.documentExcerpt) setDocumentExcerpt(json.documentExcerpt);
       setAiFilled(true);
     } catch (err: unknown) {
       setAnalyzeError(err instanceof Error ? err.message : "Could not analyze file. Please fill the form manually.");
@@ -181,6 +184,7 @@ export default function SubmitNewAssetPage() {
       data.set("contentsPreview", JSON.stringify(form.contentsPreview));
       data.set("targetAudience", form.targetAudience);
       data.set("tags", JSON.stringify(form.tags));
+      if (documentExcerpt) data.set("documentExcerpt", documentExcerpt);
       if (selectedFile) data.set("file", selectedFile);
 
       const res = await fetch("/api/specialist/assets", {
