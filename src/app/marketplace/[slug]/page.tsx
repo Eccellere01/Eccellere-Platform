@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Star, Clock, FileText, ChevronRight, ArrowLeft, Check, Shield, Download } from "lucide-react";
+import { Star, Clock, FileText, ChevronRight, ArrowLeft, Check, Download } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { assets as staticAssets, type Asset } from "@/lib/marketplace-data";
@@ -213,9 +213,8 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ sl
               </div>
 
               {/* Trust signals */}
-              <div className="mt-8 grid grid-cols-2 gap-4 border-t border-eccellere-ink/5 pt-8 sm:grid-cols-3">
+              <div className="mt-8 grid grid-cols-2 gap-4 border-t border-eccellere-ink/5 pt-8">
                 {[
-                  { icon: Shield, label: "14-day money-back guarantee" },
                   { icon: Download, label: "Instant download after purchase" },
                   { icon: FileText, label: "India-specific content & context" },
                 ].map(({ icon: Icon, label }) => (

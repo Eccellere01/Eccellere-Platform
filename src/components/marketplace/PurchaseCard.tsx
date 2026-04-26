@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Shield, Download, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { Download, FileText, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { CheckoutButton } from "@/components/marketplace/CheckoutButton";
 import { AssetPreviewModal } from "@/components/marketplace/AssetPreviewModal";
@@ -103,10 +103,6 @@ export function PurchaseCard({ asset, discount }: PurchaseCardProps) {
         </Button>
 
         <div className="mt-5 space-y-2.5 border-t border-eccellere-ink/5 pt-5 text-xs text-ink-mid">
-          <div className="flex items-center gap-2">
-            <Shield className="h-3.5 w-3.5 text-eccellere-teal" />
-            14-day money-back guarantee
-          </div>
           <div className="flex items-center gap-2">
             <Download className="h-3.5 w-3.5 text-eccellere-teal" />
             Instant access after purchase

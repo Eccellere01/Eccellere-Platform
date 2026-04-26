@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { X, Check, Star, Shield, Download, FileText } from "lucide-react";
+import { X, Check, Star, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Asset } from "@/lib/marketplace-data";
 import Link from "next/link";
+import { DocumentPreview } from "@/components/marketplace/DocumentPreview";
 
 interface AssetPreviewModalProps {
   asset: Asset;
@@ -103,27 +104,13 @@ export function AssetPreviewModal({ asset, onClose }: AssetPreviewModalProps) {
             </div>
           )}
 
-          {/* Contents preview */}
-          {asset.previewItems.length > 0 && (
-            <div>
-              <h3 className="text-xs font-medium uppercase tracking-[0.15em] text-ink-light">
-                Contents preview
-              </h3>
-              <div className="mt-3 space-y-2">
-                {asset.previewItems.map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 rounded bg-white p-3 text-sm text-ink-mid shadow-sm"
-                  >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-eccellere-gold/10 text-xs font-medium text-eccellere-gold">
-                      {i + 1}
-                    </span>
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Contents preview — live document pages */}
+          <div>
+            <h3 className="text-xs font-medium uppercase tracking-[0.15em] text-ink-light">
+              Contents preview
+            </h3>
+            <DocumentPreview assetId={asset.id} assetTitle={asset.title} />
+          </div>
 
           {/* Sectors */}
           {asset.sectors.length > 0 && asset.sectors[0] !== "All Sectors" && (
@@ -145,11 +132,7 @@ export function AssetPreviewModal({ asset, onClose }: AssetPreviewModalProps) {
           )}
 
           {/* Trust signals */}
-          <div className="grid grid-cols-3 gap-3 rounded bg-white p-4 shadow-sm text-xs text-ink-mid">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 shrink-0 text-eccellere-teal" />
-              14-day money-back guarantee
-            </div>
+          <div className="grid grid-cols-2 gap-3 rounded bg-white p-4 shadow-sm text-xs text-ink-mid">
             <div className="flex items-center gap-2">
               <Download className="h-4 w-4 shrink-0 text-eccellere-teal" />
               Instant download after purchase
