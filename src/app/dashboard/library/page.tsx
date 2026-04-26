@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { Search, Download, Star, Eye, Filter, BookOpen } from "lucide-react";
+import { Search, Download, Star, Eye, Filter, BookOpen, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -24,11 +24,30 @@ type LibraryAsset = {
   filePublicPath: string | null;
 };
 
+type EmailState = "idle" | "sending" | "sent" | "error";
+
 export default function LibraryPage() {
   const [assets, setAssets] = useState<LibraryAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const [emailState, setEmailState] = useState<Record<string, EmailState>>({});
+
+  async function handleSendEmail(assetId: string) {
+    setEmailState((s) => ({ ...s, [assetId]: "sending" }));
+    try {
+      const res = await fetch("/api/dashboard/library/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId }),
+      });
+      setEmailState((s) => ({ ...s, [assetId]: res.ok ? "sent" : "error" }));
+    } catch {
+      setEmailState((s) => ({ ...s, [assetId]: "error" }));
+    }
+    // Reset label after 5 seconds
+    setTimeout(() => setEmailState((s) => ({ ...s, [assetId]: "idle" })), 5000);
+  }
 
   useEffect(() => {
     fetch("/api/dashboard/library")
@@ -135,7 +154,7 @@ export default function LibraryPage() {
               <p className="mt-1 text-[11px] text-ink-light/60">
                 Purchased {asset.purchasedAt} · {asset.orderNumber}
               </p>
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 {asset.hasFile && asset.downloadEnabled ? (
                   <a
                     href={asset.downloadUrl}
@@ -176,6 +195,30 @@ export default function LibraryPage() {
                     <Eye className="h-3.5 w-3.5" />
                     Preview
                   </Link>
+                )}
+                {asset.hasFile && (
+                  <button
+                    onClick={() => handleSendEmail(asset.id)}
+                    disabled={emailState[asset.id] === "sending" || emailState[asset.id] === "sent"}
+                    title="Send password-protected file to your registered email"
+                    className={cn(
+                      "flex items-center gap-1.5 rounded border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                      emailState[asset.id] === "sent"
+                        ? "border-green-500/40 bg-green-50 text-green-700"
+                        : emailState[asset.id] === "error"
+                        ? "border-red-400/40 bg-red-50 text-red-600"
+                        : "border-eccellere-ink/20 text-eccellere-ink hover:border-eccellere-gold hover:text-eccellere-gold"
+                    )}
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    {emailState[asset.id] === "sending"
+                      ? "Sending…"
+                      : emailState[asset.id] === "sent"
+                      ? "Sent ✓"
+                      : emailState[asset.id] === "error"
+                      ? "Failed — retry"
+                      : "Send Email"}
+                  </button>
                 )}
               </div>
             </div>
