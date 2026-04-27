@@ -68,6 +68,22 @@ const nextConfig: NextConfig = {
 
   // Powered-by header removal
   poweredByHeader: false,
+
+  // Tree-shake big libraries so only the icons / motion components actually
+  // imported land in the client bundle. Cuts ~30-60 KiB on public routes.
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-navigation-menu",
+      "@radix-ui/react-select",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-accordion",
+    ],
+  },
 };
 
 export default nextConfig;

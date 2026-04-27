@@ -117,5 +117,18 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({ assets });
+  return NextResponse.json(
+    { assets },
+    {
+      headers: {
+        // CDN/proxy cache: serve fresh for 60s, then serve stale for up to 5min
+        // while we revalidate in the background. Big TTFB win for repeat hits
+        // since `revalidate = 60` on the route export is ignored once the
+        // handler reads NextRequest (forces dynamic).
+        "Cache-Control": search
+          ? "private, no-store"
+          : "public, s-maxage=60, stale-while-revalidate=300",
+      },
+    }
+  );
 }

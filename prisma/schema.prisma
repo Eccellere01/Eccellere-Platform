@@ -201,6 +201,11 @@ model Asset {
   reviews         AssetReview[]
   frameworkAccess FrameworkAccess[]
   cartItems       CartItem[]
+
+  // Speeds up the public marketplace listing query
+  // (status filter + createdAt sort) which is the hottest path on the site.
+  @@index([status, createdAt])
+  @@index([status, isFeatured, totalPurchases])
 }
 
 enum AssetCategory {
