@@ -19,6 +19,7 @@ export type Asset = {
   bestseller: boolean;
   pages?: number;
   lastUpdated: string;
+  createdAt?: string;
   previewItems: string[];
 };
 

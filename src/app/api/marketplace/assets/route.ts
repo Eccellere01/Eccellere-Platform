@@ -46,9 +46,9 @@ export async function GET(req: NextRequest) {
             : {}),
         },
         orderBy: [
+          { createdAt: "desc" },
           { isFeatured: "desc" },
           { totalPurchases: "desc" },
-          { createdAt: "desc" },
         ],
         select: {
           id: true,
@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
           averageRating: true,
           totalPurchases: true,
           isFeatured: true,
+          createdAt: true,
           updatedAt: true,
         },
       }),
@@ -111,6 +112,7 @@ export async function GET(req: NextRequest) {
         month: "short",
         year: "numeric",
       }),
+      createdAt: new Date(a.createdAt).toISOString(),
       previewItems: [] as string[],
     };
   });

@@ -24,14 +24,14 @@ const sectors = ["All Sectors", "Manufacturing", "Retail", "Consumer Products", 
 
 const formats = ["All Formats", "PDF", "Excel", "Template", "Toolkit", "Playbook"];
 
-const sortOptions = ["Most Popular", "Newest", "Price: Low to High", "Price: High to Low", "Highest Rated"];
+const sortOptions = ["Newest", "Most Popular", "Price: Low to High", "Price: High to Low", "Highest Rated"];
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedSector, setSelectedSector] = useState("All Sectors");
   const [selectedFormat, setSelectedFormat] = useState("All Formats");
-  const [sortBy, setSortBy] = useState("Most Popular");
+  const [sortBy, setSortBy] = useState("Newest");
   const [showFilters, setShowFilters] = useState(false);
   const [dbAssets, setDbAssets] = useState<Asset[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
@@ -78,7 +78,13 @@ export default function MarketplacePage() {
 
   const sorted = [...filtered].sort((a, b) => {
     switch (sortBy) {
-      case "Newest": return 0;
+      case "Newest": {
+        // DB assets carry an ISO createdAt; static fallback assets don't.
+        // Treat missing createdAt as oldest so DB items always sort first.
+        const at = a.createdAt ? Date.parse(a.createdAt) : 0;
+        const bt = b.createdAt ? Date.parse(b.createdAt) : 0;
+        return bt - at;
+      }
       case "Price: Low to High": return a.price - b.price;
       case "Price: High to Low": return b.price - a.price;
       case "Highest Rated": return b.rating - a.rating;
