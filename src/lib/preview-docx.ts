@@ -24,7 +24,7 @@ import path from "path";
  */
 export async function truncateDocxPages(
   src: Buffer,
-  maxPages = 5
+  maxPages = 8
 ): Promise<Buffer> {
   const zip = await JSZip.loadAsync(src);
   const docFile = zip.file("word/document.xml");

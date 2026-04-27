@@ -40,7 +40,7 @@ export function AssetSamplePreviewModal({
   title,
   open,
   onClose,
-  maxPages = 5,
+  maxPages = 8,
 }: Props) {
   const [scriptsReady, setScriptsReady] = useState({ jszip: false, docx: false });
   const [status, setStatus] = useState<"loading" | "ready" | "error" | "unavailable">(

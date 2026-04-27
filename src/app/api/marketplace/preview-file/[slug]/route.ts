@@ -75,7 +75,7 @@ export async function GET(
 
   if (needsGenerate) {
     try {
-      const generated = await ensurePreviewDocx(absOriginal, 5);
+      const generated = await ensurePreviewDocx(absOriginal, 8);
       if (!generated) {
         return NextResponse.json({ error: "Preview not available" }, { status: 415 });
       }

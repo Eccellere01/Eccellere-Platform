@@ -50,7 +50,7 @@ export function PurchaseCard({ asset, discount }: PurchaseCardProps) {
         title={asset.title}
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        maxPages={5}
+        maxPages={8}
       />
 
       <div className="rounded-lg bg-white p-6 shadow-md">

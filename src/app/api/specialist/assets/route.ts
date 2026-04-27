@@ -64,7 +64,7 @@ async function saveUploadedFile(file: File): Promise<string> {
   // marketing/preview optimisation.
   if (path.extname(destPath).toLowerCase() === ".docx") {
     try {
-      await ensurePreviewDocx(destPath, 5);
+      await ensurePreviewDocx(destPath, 8);
     } catch (err) {
       console.error("[saveUploadedFile] preview generation failed:", err);
     }
