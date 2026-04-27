@@ -6,21 +6,21 @@ import { Lightbulb, Bot, Target } from "lucide-react";
 const cards = [
   {
     icon: Lightbulb,
-    title: "Best Practice Factory",
+    title: "200+ Growth Assets",
     description:
-      "200+ frameworks, toolkits, and playbooks built over 30 years, available on-demand.",
+      "Ready-to-use toolkits, playbooks, and frameworks built over 30 years — buy once, apply immediately.",
   },
   {
     icon: Bot,
-    title: "AI-Powered Growth",
+    title: "Agentic AI Solutions",
     description:
-      "Agentic AI strategy and implementation designed for the scale and budget of India's MSMEs.",
+      "AI assessment, autonomous agents, and AI implementation designed for the scale and budget of India's MSMEs.",
   },
   {
     icon: Target,
-    title: "Results-First Consulting",
+    title: "Consulting Advisory",
     description:
-      "We don't just advise. We stay through delivery and measure outcomes.",
+      "Expert Strategy, Process Transformation, and Digital advisory. We stay through delivery and measure outcomes.",
   },
 ];
 

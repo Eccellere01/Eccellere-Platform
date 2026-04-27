@@ -21,12 +21,12 @@ export default function Home() {
         <Hero />
         <TrustBar />
         <ValueProposition />
-        <SectorFocus />
-        <MSMEStrip />
-        <FeaturedServices />
         <FeaturedMarketplace />
         <AIAssessmentCTA />
         <ChatbotTeaser />
+        <SectorFocus />
+        <FeaturedServices />
+        <MSMEStrip />
         <Perspectives />
         <Testimonials />
         <SpecialistCTA />

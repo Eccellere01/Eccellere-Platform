@@ -31,7 +31,7 @@ export function Hero() {
           transition={{ duration: 0.6 }}
           className="mb-6 text-[11px] font-medium uppercase tracking-[0.2em] text-eccellere-gold"
         >
-          Strategy · AI · Consulting for India&apos;s MSMEs
+          Growth Assets · Agentic AI · Consulting for India&apos;s MSMEs
         </motion.p>
 
         <motion.h1
@@ -40,9 +40,8 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.1 }}
           className="mx-auto max-w-4xl font-display text-[clamp(42px,8vw,90px)] font-light leading-[1.05] text-eccellere-cream"
         >
-          Consulting, AI Skills &{" "}
-          <span className="italic text-eccellere-gold">Business Toolkits</span>
-          {" "}— Built for Growth
+          <span className="italic text-eccellere-gold">Growth Assets</span>
+          {" "}& Agentic AI — Built for India&apos;s MSMEs
         </motion.h1>
 
         <motion.p
@@ -51,8 +50,8 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mx-auto mt-6 max-w-2xl text-lg font-light leading-relaxed text-white/60"
         >
-          200+ proven frameworks and on‑demand expertise in Strategy, Process
-          Transformation, and Agentic AI — designed for the scale and budgets of
+          200+ ready-to-use toolkits and playbooks, Agentic AI solutions, and
+          expert consulting advisory — designed for the scale and budgets of
           India&apos;s MSMEs and startups.
         </motion.p>
 
@@ -63,10 +62,10 @@ export function Hero() {
           className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
         >
           <Button asChild size="lg">
-            <Link href="/marketplace">Explore the Marketplace</Link>
+            <Link href="/marketplace">Browse Growth Assets</Link>
           </Button>
           <Button asChild variant="ghostLight" size="lg">
-            <Link href="/assessment">Take Free AI Assessment</Link>
+            <Link href="/agentic-ai">Explore Agentic AI</Link>
           </Button>
         </motion.div>
 

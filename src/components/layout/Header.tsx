@@ -10,8 +10,10 @@ import { NotificationBell } from "@/components/NotificationBell";
 
 const navLinks = [
   { label: "Home", href: "/" },
+  { label: "Marketplace", href: "/marketplace" },
+  { label: "Agentic AI", href: "/agentic-ai" },
   {
-    label: "What We Do",
+    label: "Consulting",
     href: "/services",
     children: [
       { label: "Strategy", href: "/services/strategy" },
@@ -19,14 +21,18 @@ const navLinks = [
       { label: "Agentic AI", href: "/services/agentic-ai" },
       { label: "Digital", href: "/services/digital" },
       { label: "Organisation Transformation", href: "/services/organisation-transformation" },
+      { label: "For MSMEs", href: "/msme-hub" },
     ],
   },
-  { label: "Agentic AI", href: "/agentic-ai" },
-  { label: "For MSMEs", href: "/msme-hub" },
-  { label: "Marketplace", href: "/marketplace" },
-  { label: "Perspectives", href: "/perspectives" },
-  { label: "About", href: "/about" },
-  { label: "Pricing", href: "/pricing" },
+  {
+    label: "More",
+    href: "#",
+    children: [
+      { label: "About", href: "/about" },
+      { label: "Perspectives", href: "/perspectives" },
+      { label: "Pricing", href: "/pricing" },
+    ],
+  },
 ];
 
 export function Header() {
