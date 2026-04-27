@@ -438,7 +438,7 @@ Start dev server: `cd eccellere && npm run dev`
 
 ---
 
-## SPRINT 11 — Commerce Engine & Content Pages ? COMPLETED
+## SPRINT 11 ï¿½ Commerce Engine & Content Pages ? COMPLETED
 
 **Duration:** Session 6
 **Files Created:** 10 new source files + 1 test suite
@@ -447,17 +447,17 @@ Start dev server: `cd eccellere && npm run dev`
 
 | # | Deliverable | Status | File(s) |
 |---|------------|--------|---------|
-| 11.1 | Services data library — full data for all 5 services (pain points, approach, deliverables, sector applications, FAQs) | ? Done | `src/lib/services-data.ts` |
-| 11.2 | Service detail pages — dynamic route with hero, approach timeline, deliverables, sector tabs, FAQ accordion, CTA | ? Done | `src/app/services/[service]/page.tsx` |
-| 11.3 | Pricing page — 3-tier plans (Starter/MSME Pro/Enterprise), feature comparison table, consulting addon callout | ? Done | `src/app/pricing/page.tsx` |
-| 11.4 | Orders API — GET (paginated list with filters), POST (create order) | ? Done | `src/app/api/orders/route.ts` |
-| 11.5 | Payments API — POST (create Razorpay order), PATCH (verify signature + create order record) | ? Done | `src/app/api/payments/route.ts` |
-| 11.6 | Razorpay webhook handler — HMAC verification, handles payment.captured / payment.failed / refund.created | ? Done | `src/app/api/webhooks/razorpay/route.ts` |
-| 11.7 | CheckoutButton component — loads Razorpay.js, opens checkout modal, verifies payment server-side | ? Done | `src/components/marketplace/CheckoutButton.tsx` |
-| 11.8 | Privacy Policy — DPDP Act 2023 compliant, data categories, user rights, retention policy | ? Done | `src/app/privacy/page.tsx` |
-| 11.9 | Terms of Service — eligibility, IP, consulting cancellation, dispute resolution (Indian jurisdiction) | ? Done | `src/app/terms/page.tsx` |
-| 11.10 | Refund Policy — 14-day money-back guarantee, consulting cancellation table, process | ? Done | `src/app/refund/page.tsx` |
-| 11.11 | Sprint 11 Playwright tests — 30 test cases covering all above | ? Done | `tests/sprint11-commerce-and-service-pages.spec.ts` |
+| 11.1 | Services data library ï¿½ full data for all 5 services (pain points, approach, deliverables, sector applications, FAQs) | ? Done | `src/lib/services-data.ts` |
+| 11.2 | Service detail pages ï¿½ dynamic route with hero, approach timeline, deliverables, sector tabs, FAQ accordion, CTA | ? Done | `src/app/services/[service]/page.tsx` |
+| 11.3 | Pricing page ï¿½ 3-tier plans (Starter/MSME Pro/Enterprise), feature comparison table, consulting addon callout | ? Done | `src/app/pricing/page.tsx` |
+| 11.4 | Orders API ï¿½ GET (paginated list with filters), POST (create order) | ? Done | `src/app/api/orders/route.ts` |
+| 11.5 | Payments API ï¿½ POST (create Razorpay order), PATCH (verify signature + create order record) | ? Done | `src/app/api/payments/route.ts` |
+| 11.6 | Razorpay webhook handler ï¿½ HMAC verification, handles payment.captured / payment.failed / refund.created | ? Done | `src/app/api/webhooks/razorpay/route.ts` |
+| 11.7 | CheckoutButton component ï¿½ loads Razorpay.js, opens checkout modal, verifies payment server-side | ? Done | `src/components/marketplace/CheckoutButton.tsx` |
+| 11.8 | Privacy Policy ï¿½ DPDP Act 2023 compliant, data categories, user rights, retention policy | ? Done | `src/app/privacy/page.tsx` |
+| 11.9 | Terms of Service ï¿½ eligibility, IP, consulting cancellation, dispute resolution (Indian jurisdiction) | ? Done | `src/app/terms/page.tsx` |
+| 11.10 | Refund Policy ï¿½ 14-day money-back guarantee, consulting cancellation table, process | ? Done | `src/app/refund/page.tsx` |
+| 11.11 | Sprint 11 Playwright tests ï¿½ 30 test cases covering all above | ? Done | `tests/sprint11-commerce-and-service-pages.spec.ts` |
 
 ### Key Technical Notes
 
@@ -467,7 +467,7 @@ Start dev server: `cd eccellere && npm run dev`
 - **Legal pages:** DPDP Act 2023 compliance. Governing jurisdiction: Mumbai courts. 14-day refund guarantee.
 - **TypeScript:** 0 errors in all Sprint 11 source files.
 
-### Test Cases — Sprint 11
+### Test Cases ï¿½ Sprint 11
 
 | TC# | Test Case | Expected Result | Priority |
 |-----|-----------|-----------------|----------|
@@ -504,7 +504,7 @@ Start dev server: `cd eccellere && npm run dev`
 
 ---
 
-## Quick Test URLs (Dev Server — Updated Sprint 11)
+## Quick Test URLs (Dev Server ï¿½ Updated Sprint 11)
 
 | Page | URL |
 |------|-----|
@@ -520,6 +520,6 @@ Start dev server: `cd eccellere && npm run dev`
 
 ---
 
-*Report generated: Session 6 — Sprint 11 complete*
+*Report generated: Session 6 ï¿½ Sprint 11 complete*
 *Total sprints completed: 11 of 11 (defined scope)*
 *Total Playwright test cases: 149+*

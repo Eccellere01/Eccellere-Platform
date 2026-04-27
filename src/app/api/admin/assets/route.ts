@@ -86,8 +86,28 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true, asset });
   }
 
+  // ── Delete asset ───────────────────────────────────────────────────────────
+  if (action === "delete") {
+    await prisma.asset.delete({ where: { id } });
+    return NextResponse.json({ success: true, deleted: id });
+  }
+
+  // ── Request resubmission (alias: reject) ───────────────────────────────────
+  if (action === "request-resubmission") {
+    const asset = await prisma.asset.update({
+      where: { id },
+      data: {
+        status: "REVISIONS_REQUESTED" as never,
+        reviewedBy: session.user?.email ?? undefined,
+        reviewNotes: reviewNotes ?? undefined,
+      },
+      select: { id: true, title: true, status: true },
+    });
+    return NextResponse.json({ success: true, asset });
+  }
+
   if (action !== "approve" && action !== "reject") {
-    return NextResponse.json({ error: "action must be 'approve', 'reject', 'enable-download', or 'disable-download'" }, { status: 400 });
+    return NextResponse.json({ error: "action must be 'approve', 'reject', 'request-resubmission', 'delete', 'enable-download', or 'disable-download'" }, { status: 400 });
   }
 
   const newStatus = action === "approve" ? "PUBLISHED" : "REVISIONS_REQUESTED";

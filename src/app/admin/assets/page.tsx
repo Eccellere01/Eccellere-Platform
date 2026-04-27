@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Search, ChevronLeft, Filter, Eye, CheckCircle, Clock,
   XCircle, Star, Loader2, AlertCircle, Download, DownloadCloud,
+  Trash2, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,77 @@ const STATIC_ASSETS: StaticAsset[] = [
   { id: "AST-222", title: "Brand Identity Toolkit for D2C",       specialist: "Karan Singh",  category: "Digital",      format: "PDF + Figma",   price: "₹2,499", status: "pending",   sales: 0,   rating: null, submitted: "Apr 2026" },
   { id: "AST-200", title: "Basic HR Policy Template",             specialist: "Deepak Verma", category: "Organisation", format: "Word",          price: "₹799",   status: "rejected",  sales: 0,   rating: null, submitted: "Mar 2026" },
 ];
+
+// ── Resubmission reason modal ───────────────────────────────────────────────
+function ResubmitModal({
+  assetTitle,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  assetTitle: string;
+  onConfirm: (note: string) => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  const [note, setNote] = useState("");
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <h2 className="text-sm font-semibold text-eccellere-ink">Request Resubmission</h2>
+        <p className="mt-1 text-xs text-ink-light">{assetTitle}</p>
+        <textarea
+          className="mt-3 w-full rounded-md border border-eccellere-ink/10 bg-eccellere-cream p-3 text-sm placeholder:text-ink-light focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+          rows={3}
+          placeholder="Explain what the specialist needs to fix (optional)…"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={onCancel} disabled={loading}>Cancel</Button>
+          <Button size="sm" onClick={() => onConfirm(note)} disabled={loading}>
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Send Request"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Delete confirm modal ──────────────────────────────────────────────────────
+function DeleteModal({
+  assetTitle,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  assetTitle: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <h2 className="text-sm font-semibold text-eccellere-error">Delete Asset</h2>
+        <p className="mt-2 text-sm text-eccellere-ink">
+          Permanently delete <strong>{assetTitle}</strong>? This cannot be undone and the asset will be removed from the catalog immediately.
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={onCancel} disabled={loading}>Cancel</Button>
+          <Button
+            size="sm"
+            className="bg-eccellere-error text-white hover:bg-eccellere-error/90"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Delete"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── DB asset shape from /api/admin/assets ─────────────────────────────────────
 interface DbAsset {
@@ -63,20 +135,23 @@ interface DisplayAsset {
   submitted: string;
   isStatic: boolean;
   canAct: boolean;
+  canRequestResubmission: boolean;
+  canDelete: boolean;
   downloadEnabled: boolean;
 }
 
 const DB_STATUS_CFG: Record<string, {
   filterStatus: "published" | "pending" | "rejected";
-  label: string; color: string; icon: typeof CheckCircle; canAct: boolean;
+  label: string; color: string; icon: typeof CheckCircle;
+  canAct: boolean; canRequestResubmission: boolean;
 }> = {
-  SUBMITTED:           { filterStatus: "pending",   label: "Submitted",    color: "bg-eccellere-gold/10 text-eccellere-gold",   icon: Clock,       canAct: true  },
-  UNDER_REVIEW:        { filterStatus: "pending",   label: "Under Review", color: "bg-blue-50 text-blue-600",                   icon: Clock,       canAct: true  },
-  REVISIONS_REQUESTED: { filterStatus: "rejected",  label: "Revisions",    color: "bg-eccellere-error/10 text-eccellere-error", icon: XCircle,     canAct: false },
-  APPROVED:            { filterStatus: "published", label: "Approved",     color: "bg-eccellere-teal/10 text-eccellere-teal",   icon: CheckCircle, canAct: false },
-  PUBLISHED:           { filterStatus: "published", label: "Published",    color: "bg-eccellere-teal/10 text-eccellere-teal",   icon: CheckCircle, canAct: false },
-  RETIRED:             { filterStatus: "rejected",  label: "Retired",      color: "bg-eccellere-ink/10 text-ink-light",         icon: XCircle,     canAct: false },
-  DRAFT:               { filterStatus: "pending",   label: "Draft",        color: "bg-eccellere-gold/10 text-eccellere-gold",   icon: Clock,       canAct: false },
+  SUBMITTED:           { filterStatus: "pending",   label: "Submitted",    color: "bg-eccellere-gold/10 text-eccellere-gold",   icon: Clock,       canAct: true,  canRequestResubmission: true  },
+  UNDER_REVIEW:        { filterStatus: "pending",   label: "Under Review", color: "bg-blue-50 text-blue-600",                   icon: Clock,       canAct: true,  canRequestResubmission: true  },
+  REVISIONS_REQUESTED: { filterStatus: "rejected",  label: "Revisions",    color: "bg-eccellere-error/10 text-eccellere-error", icon: XCircle,     canAct: false, canRequestResubmission: false },
+  APPROVED:            { filterStatus: "published", label: "Approved",     color: "bg-eccellere-teal/10 text-eccellere-teal",   icon: CheckCircle, canAct: false, canRequestResubmission: true  },
+  PUBLISHED:           { filterStatus: "published", label: "Published",    color: "bg-eccellere-teal/10 text-eccellere-teal",   icon: CheckCircle, canAct: false, canRequestResubmission: true  },
+  RETIRED:             { filterStatus: "rejected",  label: "Retired",      color: "bg-eccellere-ink/10 text-ink-light",         icon: XCircle,     canAct: false, canRequestResubmission: false },
+  DRAFT:               { filterStatus: "pending",   label: "Draft",        color: "bg-eccellere-gold/10 text-eccellere-gold",   icon: Clock,       canAct: false, canRequestResubmission: false },
 };
 
 const STATIC_STATUS_CFG: Record<string, {
@@ -113,6 +188,8 @@ function dbToDisplay(a: DbAsset): DisplayAsset {
     submitted: formatDate(a.createdAt),
     isStatic: false,
     canAct: cfg.canAct,
+    canRequestResubmission: cfg.canRequestResubmission,
+    canDelete: true,
     downloadEnabled: a.downloadEnabled,
   };
 }
@@ -136,6 +213,8 @@ function staticToDisplay(a: StaticAsset): DisplayAsset {
     submitted: a.submitted,
     isStatic: true,
     canAct: false,
+    canRequestResubmission: false,
+    canDelete: false,
     downloadEnabled: true,
   };
 }
@@ -147,6 +226,8 @@ export default function AdminAssets() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [resubmitTarget, setResubmitTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const fetchAssets = useCallback(async () => {
     setLoading(true);
@@ -176,6 +257,38 @@ export default function AdminAssets() {
       if (!res.ok) throw new Error("Action failed");
     } finally {
       setActionLoading(null);
+      await fetchAssets();
+    }
+  }
+
+  async function handleRequestResubmission(dbId: string, note: string) {
+    setActionLoading(dbId + "request-resubmission");
+    try {
+      const res = await fetch("/api/admin/assets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: dbId, action: "request-resubmission", reviewNotes: note }),
+      });
+      if (!res.ok) throw new Error("Action failed");
+    } finally {
+      setActionLoading(null);
+      setResubmitTarget(null);
+      await fetchAssets();
+    }
+  }
+
+  async function handleDelete(dbId: string) {
+    setActionLoading(dbId + "delete");
+    try {
+      const res = await fetch("/api/admin/assets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: dbId, action: "delete" }),
+      });
+      if (!res.ok) throw new Error("Delete failed");
+    } finally {
+      setActionLoading(null);
+      setDeleteTarget(null);
       await fetchAssets();
     }
   }
@@ -215,6 +328,24 @@ export default function AdminAssets() {
 
   return (
     <div className="min-h-screen bg-eccellere-cream">
+      {/* Resubmission modal */}
+      {resubmitTarget && (
+        <ResubmitModal
+          assetTitle={resubmitTarget.title}
+          loading={actionLoading === resubmitTarget.id + "request-resubmission"}
+          onConfirm={(note) => handleRequestResubmission(resubmitTarget.id, note)}
+          onCancel={() => setResubmitTarget(null)}
+        />
+      )}
+      {/* Delete confirm modal */}
+      {deleteTarget && (
+        <DeleteModal
+          assetTitle={deleteTarget.title}
+          loading={actionLoading === deleteTarget.id + "delete"}
+          onConfirm={() => handleDelete(deleteTarget.id)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
       <header className="border-b border-eccellere-ink/5 bg-white">
         <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-4 px-6">
           <Link href="/admin" className="text-ink-light hover:text-eccellere-ink">
@@ -370,31 +501,43 @@ export default function AdminAssets() {
                             </button>
                           )}
 
-                          {!asset.isStatic && asset.canAct ? (
-                            <>
-                              <Button
-                                size="sm"
-                                className="h-7 text-[10px]"
-                                disabled={actionLoading !== null}
-                                onClick={() => handleAction(asset.dbId!, "approve")}
-                              >
-                                {actionLoading === asset.dbId + "approve"
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : "Approve"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-[10px]"
-                                disabled={actionLoading !== null}
-                                onClick={() => handleAction(asset.dbId!, "reject")}
-                              >
-                                {actionLoading === asset.dbId + "reject"
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : "Reject"}
-                              </Button>
-                            </>
-                          ) : (
+                          {!asset.isStatic && asset.canAct && (
+                            <Button
+                              size="sm"
+                              className="h-7 text-[10px]"
+                              disabled={actionLoading !== null}
+                              onClick={() => handleAction(asset.dbId!, "approve")}
+                            >
+                              {actionLoading === asset.dbId + "approve"
+                                ? <Loader2 className="h-3 w-3 animate-spin" />
+                                : "Approve"}
+                            </Button>
+                          )}
+                          {!asset.isStatic && asset.canRequestResubmission && (
+                            <button
+                              title="Request resubmission"
+                              disabled={actionLoading !== null}
+                              onClick={() => setResubmitTarget({ id: asset.dbId!, title: asset.title })}
+                              className="rounded p-1 text-eccellere-gold hover:bg-eccellere-gold/10 disabled:opacity-50"
+                            >
+                              {actionLoading === asset.dbId + "request-resubmission"
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <RefreshCw className="h-4 w-4" />}
+                            </button>
+                          )}
+                          {!asset.isStatic && asset.canDelete && (
+                            <button
+                              title="Delete asset"
+                              disabled={actionLoading !== null}
+                              onClick={() => setDeleteTarget({ id: asset.dbId!, title: asset.title })}
+                              className="rounded p-1 text-eccellere-error hover:bg-eccellere-error/10 disabled:opacity-50"
+                            >
+                              {actionLoading === asset.dbId + "delete"
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <Trash2 className="h-4 w-4" />}
+                            </button>
+                          )}
+                          {asset.isStatic && (
                             <button className="rounded p-1 text-ink-light hover:bg-eccellere-cream hover:text-eccellere-ink">
                               <Eye className="h-4 w-4" />
                             </button>
