@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
+// Public liveness probe — must not leak DB connection details, error
+// strings, or any infrastructure info to unauthenticated callers.
 export async function GET() {
-  const dbUrl = process.env.DATABASE_URL || "NOT SET";
-  // Show host/db but redact password
-  const redacted = dbUrl.replace(/:([^@]+)@/, ":****@");
-  
   try {
-    const count = await prisma.user.count();
-    return NextResponse.json({ status: "ok", userCount: count, dbUrl: redacted });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ status: "error", error: message, dbUrl: redacted }, { status: 500 });
+    await Promise.race([
+      prisma.user.count(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 3000)
+      ),
+    ]);
+    return NextResponse.json({ status: "ok" });
+  } catch {
+    return NextResponse.json({ status: "degraded" }, { status: 503 });
   }
 }

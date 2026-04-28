@@ -69,6 +69,15 @@ const nextConfig: NextConfig = {
   // Powered-by header removal
   poweredByHeader: false,
 
+  // Strip console.* from production bundles to keep the event loop free of
+  // synchronous log writes on Hostinger's overlayfs. Errors are kept so we
+  // still get diagnostics for genuine failures.
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production"
+      ? { exclude: ["error", "warn"] }
+      : false,
+  },
+
   // Tree-shake big libraries so only the icons / motion components actually
   // imported land in the client bundle. Cuts ~30-60 KiB on public routes.
   experimental: {

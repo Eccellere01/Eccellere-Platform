@@ -168,10 +168,26 @@ async function seedUsers() {
   }
 }
 
-export async function GET() {
+// SECURITY: this endpoint creates test users with known passwords in the
+// live DB. It must NEVER be reachable without an admin setup token.
+function isAuthorised(req: Request): boolean {
+  const token = process.env.ADMIN_SETUP_TOKEN;
+  if (!token) return false; // no token configured → endpoint is disabled
+  const provided = new URL(req.url).searchParams.get("token")
+    ?? req.headers.get("x-setup-token");
+  return provided === token;
+}
+
+export async function GET(req: Request) {
+  if (!isAuthorised(req)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   return seedUsers();
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  if (!isAuthorised(req)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   return seedUsers();
 }
