@@ -101,6 +101,17 @@ export async function middleware(request: NextRequest) {
   response.headers.set("Cross-Origin-Embedder-Policy", "require-corp");
   response.headers.set("Cross-Origin-Resource-Policy", "same-site");
 
+  // ── Cache-Control override for HTML pages ─────────────────────────────────
+  // Next.js sets `Cache-Control: s-maxage=31536000` on prerendered pages, which
+  // makes upstream CDNs (like Hostinger HCDN) hold a stale HTML shell pointing
+  // to old JS chunk hashes after a deploy. Force shells to revalidate so a new
+  // build is picked up immediately. Static assets under /_next/static are
+  // excluded by the matcher above and remain immutable.
+  response.headers.set(
+    "Cache-Control",
+    "private, no-store, max-age=0, must-revalidate"
+  );
+
   return response;
 }
 
