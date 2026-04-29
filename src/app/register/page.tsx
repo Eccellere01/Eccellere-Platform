@@ -1,4 +1,4 @@
-﻿"use client";
+?"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -7,10 +7,10 @@ import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Users } from "lucide-react";
 
-/* â”€â”€ Option lists â”€â”€ */
+/* ── Option lists ── */
 const businessTypes = ["Proprietorship", "Pvt Ltd", "LLP", "Partnership", "Startup", "Other"];
 const sectorOptions = ["Manufacturing", "Retail", "Consumer Products", "Logistics", "IT Services", "Healthcare", "FMCG", "Other"];
-const revenueRanges = ["< â‚¹50 Lakhs", "â‚¹50L â€“ â‚¹1 Crore", "â‚¹1Cr â€“ â‚¹5 Crore", "â‚¹5Cr â€“ â‚¹25 Crore", "â‚¹25Cr â€“ â‚¹100 Crore", "> â‚¹100 Crore"];
+const revenueRanges = ["< ₹50 Lakhs", "₹50L – ₹1 Crore", "₹1Cr – ₹5 Crore", "₹5Cr – ₹25 Crore", "₹25Cr – ₹100 Crore", "> ₹100 Crore"];
 const employeeRanges = ["1-10", "11-50", "51-200", "201-500", "500+"];
 const challengeOptions = ["Revenue growth", "Operational efficiency", "Digital transformation", "AI adoption", "Talent & retention", "Quality management", "Supply chain", "Market expansion", "Compliance & governance", "Cost reduction"];
 const serviceDomainOptions = ["Strategy", "Process Transformation", "Agentic AI", "Digital", "Organisation Transformation", "Financial Advisory", "Operations Excellence"];
@@ -24,14 +24,14 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  /* â”€â”€ Client form state â”€â”€ */
+  /* ── Client form state ── */
   const [client, setClient] = useState({
     name: "", email: "", password: "", phone: "",
     companyName: "", businessType: "", sector: "", revenueRange: "", employeeRange: "",
     city: "", state: "", challenges: [] as string[], referralSource: "",
   });
 
-  /* â”€â”€ Specialist form state â”€â”€ */
+  /* ── Specialist form state ── */
   const [spec, setSpec] = useState({
     name: "", email: "", password: "",
     linkedinUrl: "", currentRole: "", organisation: "", experienceYears: "", bio: "",
@@ -137,7 +137,7 @@ export default function RegisterPage() {
   const labelClass =
     "mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-light";
 
-  /* â”€â”€ Success screen â”€â”€ */
+  /* ── Success screen ── */
   if (step === 99) {
     return (
       <>
@@ -167,7 +167,7 @@ export default function RegisterPage() {
     );
   }
 
-  /* â”€â”€ Role selector â”€â”€ */
+  /* ── Role selector ── */
   if (!role) {
     return (
       <>
@@ -199,7 +199,7 @@ export default function RegisterPage() {
                   Get expert consulting, access frameworks, and scale your MSME with Eccellere&apos;s specialist network.
                 </p>
                 <span className="mt-4 inline-block text-sm font-medium text-eccellere-gold group-hover:underline">
-                  Register as Client â†’
+                  Register as Client →
                 </span>
               </button>
 
@@ -217,7 +217,7 @@ export default function RegisterPage() {
                   Monetise your expertise with 60% revenue share. Publish frameworks, take assignments, and grow your practice.
                 </p>
                 <span className="mt-4 inline-block text-sm font-medium text-eccellere-teal group-hover:underline">
-                  Apply as Specialist â†’
+                  Apply as Specialist →
                 </span>
               </button>
             </div>
@@ -233,7 +233,7 @@ export default function RegisterPage() {
     );
   }
 
-  /* â”€â”€ CLIENT REGISTRATION FORM â”€â”€ */
+  /* ── CLIENT REGISTRATION FORM ── */
   if (role === "CLIENT") {
     const clientSteps = [
       { number: 1, label: "Account" },
@@ -257,7 +257,7 @@ export default function RegisterPage() {
               {clientSteps.map((s) => (
                 <div key={s.number} className="flex items-center gap-2">
                   <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${step >= s.number ? "bg-eccellere-gold text-white" : "border border-eccellere-ink/10 text-ink-light"}`}>
-                    {step > s.number ? "âœ“" : s.number}
+                    {step > s.number ? "✓" : s.number}
                   </div>
                   <span className="hidden text-xs text-ink-light sm:block">{s.label}</span>
                   {s.number < clientSteps.length && <div className="mx-2 h-px w-8 bg-eccellere-ink/10" />}
@@ -275,8 +275,8 @@ export default function RegisterPage() {
                   <div><label className={labelClass}>Phone</label><input type="tel" value={client.phone} onChange={(e) => updateClient("phone", e.target.value)} className={inputClass} /></div>
                   <Button onClick={() => setStep(2)} disabled={!client.name || !client.email || client.password.length < 8} className="w-full">Continue</Button>
                   <p className="text-center text-xs text-ink-light">
-                    <button onClick={() => { setRole(""); setStep(1); }} className="text-eccellere-gold hover:underline">â† Choose a different role</button>
-                    {" Â· "}
+                    <button onClick={() => { setRole(""); setStep(1); }} className="text-eccellere-gold hover:underline">← Choose a different role</button>
+                    {" · "}
                     <Link href="/login" className="text-eccellere-gold hover:underline">Sign in</Link>
                   </p>
                 </div>
@@ -358,7 +358,7 @@ export default function RegisterPage() {
                   <div className="flex gap-3">
                     <Button variant="ghost" onClick={() => setStep(2)}>Back</Button>
                     <Button onClick={handleClientSubmit} disabled={submitting} className="flex-1">
-                      {submitting ? "Creating accountâ€¦" : "Create Account"}
+                      {submitting ? "Creating account…" : "Create Account"}
                     </Button>
                   </div>
                 </div>
@@ -371,7 +371,7 @@ export default function RegisterPage() {
     );
   }
 
-  /* â”€â”€ SPECIALIST REGISTRATION FORM â”€â”€ */
+  /* ── SPECIALIST REGISTRATION FORM ── */
   const specSteps = [
     { number: 1, label: "Details" },
     { number: 2, label: "Expertise" },
@@ -396,7 +396,7 @@ export default function RegisterPage() {
             {specSteps.map((s) => (
               <div key={s.number} className="flex items-center gap-2">
                 <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${step >= s.number ? "bg-eccellere-gold text-white" : "border border-eccellere-ink/10 text-ink-light"}`}>
-                  {step > s.number ? "âœ“" : s.number}
+                  {step > s.number ? "✓" : s.number}
                 </div>
                 <span className="hidden text-xs text-ink-light sm:block">{s.label}</span>
                 {s.number < specSteps.length && <div className="mx-2 h-px w-8 bg-eccellere-ink/10" />}
@@ -422,8 +422,8 @@ export default function RegisterPage() {
                 <div><label className={labelClass}>Short Bio</label><textarea value={spec.bio} onChange={(e) => updateSpec("bio", e.target.value)} className={inputClass} rows={3} placeholder="Your expertise in 2-3 sentences..." /></div>
                 <Button onClick={() => setStep(2)} disabled={!spec.name || !spec.email || spec.password.length < 8 || !spec.linkedinUrl || !spec.currentRole || !spec.experienceYears} className="w-full">Continue</Button>
                 <p className="text-center text-xs text-ink-light">
-                  <button onClick={() => { setRole(""); setStep(1); }} className="text-eccellere-gold hover:underline">â† Choose a different role</button>
-                  {" Â· "}
+                  <button onClick={() => { setRole(""); setStep(1); }} className="text-eccellere-gold hover:underline">← Choose a different role</button>
+                  {" · "}
                   <Link href="/login" className="text-eccellere-gold hover:underline">Sign in</Link>
                 </p>
               </div>
@@ -477,14 +477,14 @@ export default function RegisterPage() {
                   </div>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <div><label className={labelClass}>Min Hourly Rate (â‚¹)</label><input type="number" value={spec.hourlyRateMin} onChange={(e) => updateSpec("hourlyRateMin", e.target.value)} className={inputClass} placeholder="e.g. 3000" /></div>
-                  <div><label className={labelClass}>Max Hourly Rate (â‚¹)</label><input type="number" value={spec.hourlyRateMax} onChange={(e) => updateSpec("hourlyRateMax", e.target.value)} className={inputClass} placeholder="e.g. 8000" /></div>
+                  <div><label className={labelClass}>Min Hourly Rate (₹)</label><input type="number" value={spec.hourlyRateMin} onChange={(e) => updateSpec("hourlyRateMin", e.target.value)} className={inputClass} placeholder="e.g. 3000" /></div>
+                  <div><label className={labelClass}>Max Hourly Rate (₹)</label><input type="number" value={spec.hourlyRateMax} onChange={(e) => updateSpec("hourlyRateMax", e.target.value)} className={inputClass} placeholder="e.g. 8000" /></div>
                 </div>
                 {error && <p className="text-sm text-eccellere-error">{error}</p>}
                 <div className="flex gap-3">
                   <Button variant="ghost" onClick={() => setStep(1)}>Back</Button>
                   <Button onClick={handleSpecSubmit} disabled={submitting || !spec.serviceDomains.length || !spec.sectorExpertise.length || !spec.availability} className="flex-1">
-                    {submitting ? "Submittingâ€¦" : "Submit Application"}
+                    {submitting ? "Submitting…" : "Submit Application"}
                   </Button>
                 </div>
               </div>

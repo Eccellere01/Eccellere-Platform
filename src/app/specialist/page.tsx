@@ -1,4 +1,4 @@
-﻿"use client";
+?"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -62,7 +62,7 @@ const ASSIGNMENT_STATUS_STYLE: Record<string, string> = {
 };
 
 function fmt(n: number) {
-  return "â‚¹" + n.toLocaleString("en-IN");
+  return "₹" + n.toLocaleString("en-IN");
 }
 function fmtDate(s: string) {
   return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -105,7 +105,7 @@ export default function SpecialistDashboard() {
     return (
       <div className="flex h-64 items-center justify-center gap-2 text-sm text-ink-light">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Loading dashboardâ€¦
+        Loading dashboard…
       </div>
     );
   }
@@ -124,7 +124,7 @@ export default function SpecialistDashboard() {
     { label: "Total Earnings", value: fmt(kpis.totalEarnings), change: "Lifetime (your share)", icon: IndianRupee },
     { label: "Published Assets", value: String(kpis.publishedAssets), change: `${recentAssets.length} total in system`, icon: Package },
     { label: "Active Assignments", value: String(kpis.activeAssignments), change: kpis.activeAssignments === 0 ? "None active" : "Ongoing", icon: ClipboardList },
-    { label: "Avg Rating", value: kpis.avgRating > 0 ? kpis.avgRating.toFixed(1) : "â€”", change: "Across all assets", icon: Star },
+    { label: "Avg Rating", value: kpis.avgRating > 0 ? kpis.avgRating.toFixed(1) : "—", change: "Across all assets", icon: Star },
   ];
 
   return (
@@ -237,7 +237,7 @@ export default function SpecialistDashboard() {
               </Button>
             </div>
             {recentAssets.length === 0 ? (
-              <p className="px-6 py-6 text-sm text-ink-light">No assets yet. <Link href="/specialist/assets/new" className="underline hover:text-eccellere-gold">Submit your first â†’</Link></p>
+              <p className="px-6 py-6 text-sm text-ink-light">No assets yet. <Link href="/specialist/assets/new" className="underline hover:text-eccellere-gold">Submit your first →</Link></p>
             ) : (
               <div className="divide-y divide-eccellere-ink/5">
                 {recentAssets.map((asset) => (
@@ -277,7 +277,7 @@ export default function SpecialistDashboard() {
                       <div>
                         <p className="text-xs text-ink-light">Revenue</p>
                         <p className="font-mono text-sm text-eccellere-gold">
-                          {asset.totalRevenue > 0 ? fmt(asset.totalRevenue) : "â€”"}
+                          {asset.totalRevenue > 0 ? fmt(asset.totalRevenue) : "—"}
                         </p>
                       </div>
                     </div>
@@ -357,7 +357,7 @@ export default function SpecialistDashboard() {
             </div>
             <p className="mt-6 text-xs text-ink-light">
               Detailed payout history and bank account settings are available in{" "}
-              <Link href="/specialist/payments" className="underline hover:text-eccellere-gold">Earnings &amp; Payouts â†’</Link>
+              <Link href="/specialist/payments" className="underline hover:text-eccellere-gold">Earnings &amp; Payouts →</Link>
             </p>
           </div>
         )}
