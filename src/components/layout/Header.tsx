@@ -10,15 +10,14 @@ import { NotificationBell } from "@/components/NotificationBell";
 
 const navLinks = [
   { label: "Home", href: "/" },
-  { label: "MSME", href: "/msme-hub" },
   { label: "Marketplace", href: "/marketplace" },
+  { label: "Agentic AI", href: "/services/agentic-ai" },
   {
     label: "Consulting",
     href: "/services",
     children: [
       { label: "Strategy", href: "/services/strategy" },
       { label: "Process Transformation", href: "/services/process-transformation" },
-      { label: "Agentic AI", href: "/services/agentic-ai" },
       { label: "Digital", href: "/services/digital" },
       { label: "Organisation Transformation", href: "/services/organisation-transformation" },
     ],
@@ -27,6 +26,7 @@ const navLinks = [
     label: "More",
     href: "#",
     children: [
+      { label: "MSME Hub", href: "/msme-hub" },
       { label: "About", href: "/about" },
       { label: "Perspectives", href: "/perspectives" },
       { label: "Pricing", href: "/pricing" },
