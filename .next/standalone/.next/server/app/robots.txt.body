@@ -1,0 +1,17 @@
+User-Agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /specialist/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+
+User-Agent: GPTBot
+Disallow: /
+
+User-Agent: ChatGPT-User
+Disallow: /
+
+Host: https://eccellere.in
+Sitemap: https://eccellere.in/sitemap.xml

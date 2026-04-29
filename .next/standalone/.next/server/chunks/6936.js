@@ -1,0 +1,1 @@
+"use strict";exports.id=6936,exports.ids=[6936],exports.modules={16936:(a,b,c)=>{c.r(b);let d=process.env.SENTRY_DSN??process.env.NEXT_PUBLIC_SENTRY_DSN;d&&c.e(7225).then(c.t.bind(c,77225,23)).then(a=>{a.init({dsn:d,environment:"production",tracesSampleRate:.1,debug:!1})})}};

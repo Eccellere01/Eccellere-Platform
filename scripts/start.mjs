@@ -3,8 +3,12 @@
  *
  * Guards against starting without a build, and ensures PORT/HOSTNAME
  * are correctly set for Hostinger's Node.js environment.
+ *
+ * The prebuilt .next/standalone (excluding node_modules) is committed to git.
+ * On first run, this script symlinks the root node_modules into standalone so
+ * the server can resolve its dependencies without a full rebuild.
  */
-import { existsSync } from "fs";
+import { existsSync, symlinkSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
@@ -12,6 +16,8 @@ import { createRequire } from "module";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const serverPath = join(root, ".next", "standalone", "server.js");
+const standaloneNmPath = join(root, ".next", "standalone", "node_modules");
+const rootNmPath = join(root, "node_modules");
 
 if (!existsSync(serverPath)) {
   console.error(
@@ -19,6 +25,17 @@ if (!existsSync(serverPath)) {
     "       Run 'npm run build' before starting the server.\n"
   );
   process.exit(1);
+}
+
+// Symlink root node_modules into standalone if not already present.
+// This avoids a full npm install inside the standalone directory.
+if (!existsSync(standaloneNmPath) && existsSync(rootNmPath)) {
+  try {
+    symlinkSync(rootNmPath, standaloneNmPath, "junction");
+    console.log("[start] Linked node_modules into .next/standalone");
+  } catch (e) {
+    console.warn("[start] Could not symlink node_modules (non-fatal):", e.message);
+  }
 }
 
 // Next.js standalone reads PORT and HOSTNAME from env.
@@ -42,3 +59,4 @@ console.log(`[start] Starting Next.js on ${process.env.HOSTNAME}:${process.env.P
 // Load the standalone server
 const require = createRequire(import.meta.url);
 require(serverPath);
+
