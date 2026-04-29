@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 const VALID_ROLES = [
@@ -91,4 +92,49 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({ users });
+}
+
+/**
+ * PATCH /api/admin/setup
+ * Reset a user's password.
+ * Body: { token: string, email: string, newPassword: string }
+ */
+export async function PATCH(req: NextRequest) {
+  const validToken = getValidToken();
+  if (!validToken) {
+    return NextResponse.json({ error: "Setup endpoint disabled" }, { status: 403 });
+  }
+
+  let body: { token?: string; email?: string; newPassword?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!body.token || body.token !== validToken) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 403 });
+  }
+  if (!body.email) {
+    return NextResponse.json({ error: "email required" }, { status: 400 });
+  }
+  if (!body.newPassword || body.newPassword.length < 8) {
+    return NextResponse.json({ error: "newPassword must be at least 8 characters" }, { status: 400 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: body.email },
+    select: { id: true },
+  });
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const hash = await bcrypt.hash(body.newPassword, 12);
+  await prisma.user.update({
+    where: { email: body.email },
+    data: { passwordHash: hash },
+  });
+
+  return NextResponse.json({ success: true, message: "Password updated." });
 }
