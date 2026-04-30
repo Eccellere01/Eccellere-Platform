@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
-import { resolveUploadPath } from "@/lib/uploads";
+import { signAssetToken } from "@/lib/asset-token";
 import { createRequire } from "module";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +11,13 @@ export const dynamic = "force-dynamic";
  * POST /api/dashboard/library/send-email
  * Body: { assetId: string }
  *
- * Generates a password-protected copy of the purchased asset file and
- * sends it to the user's registered email as an attachment.
- * Password = the user's login email address.
+ * Sends an email to the registered user with a signed, time-limited
+ * download link to the purchased asset. Uses tokenised links (7-day TTL)
+ * rather than attachments to avoid SES size limits and inconsistent
+ * client-side decryption of password-protected Office files.
  */
+const LINK_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -35,7 +36,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "assetId is required" }, { status: 400 });
   }
 
-  // ── Verify the user has a PAID order for this asset ──────────────────────
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
     select: {
@@ -64,7 +64,6 @@ export async function POST(request: NextRequest) {
 
   const fileUrls = Array.isArray(asset.fileUrls) ? (asset.fileUrls as string[]) : [];
   const fileUrl = fileUrls[0] ?? null;
-
   if (!fileUrl?.startsWith("/uploads/")) {
     return NextResponse.json(
       { error: "No file is attached to this asset yet. Please contact support." },
@@ -72,42 +71,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── Resolve absolute path ─────────────────────────────────────────────────
-  let absPath: string;
-  try {
-    absPath = resolveUploadPath(fileUrl);
-  } catch {
-    return NextResponse.json({ error: "Invalid file path" }, { status: 400 });
-  }
+  // Signed 7-day download link
+  const token = signAssetToken(assetId, user.id, LINK_TTL_SECONDS);
+  const baseUrl =
+    process.env.NEXTAUTH_URL ||
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    "https://eccellere.co.in";
+  const downloadUrl = `${baseUrl.replace(/\/$/, "")}/api/files/asset/${token}`;
 
-  if (!fs.existsSync(absPath)) {
-    return NextResponse.json(
-      { error: "File not found on server. Please contact support." },
-      { status: 404 }
-    );
-  }
-
-  // ── Password = user's email address ──────────────────────────────────────
-  const password = session.user.email;
-  const safeTitle = asset.title.replace(/[^\w\s.-]/g, "").trim().replace(/\s+/g, "_");
-  const ext = path.extname(absPath).toLowerCase();
-  const attachmentName = `${safeTitle}${ext}`;
-
-  const require = createRequire(import.meta.url);
-  let attachmentBuffer: Buffer;
-
-  if (ext === ".docx" || ext === ".xlsx" || ext === ".pptx" || ext === ".doc" || ext === ".xls" || ext === ".ppt") {
-    // ── Office file — encrypt with officecrypto-tool ──────────────────────
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const officecrypto = require("officecrypto-tool") as any;
-    const inputBuffer = fs.readFileSync(absPath);
-    attachmentBuffer = await officecrypto.encrypt(inputBuffer, { password });
-  } else {
-    // ── PDF / ZIP / other — send as-is (pdf-lib does not support encryption) ──
-    attachmentBuffer = fs.readFileSync(absPath);
-  }
-
-  // ── Send email via nodemailer + SES (or console in dev) ──────────────────
   const recipientEmail = session.user.email;
   const recipientName = user.name ?? "Client";
   const assetTitle = asset.title;
@@ -115,21 +86,22 @@ export async function POST(request: NextRequest) {
   const isProduction = process.env.EMAIL_PROVIDER === "ses";
 
   if (isProduction) {
+    const require = createRequire(import.meta.url);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const nodemailer = require("nodemailer") as any;
     const { SESClient, SendRawEmailCommand } = await import("@aws-sdk/client-ses");
 
-    // Build MIME message via nodemailer (stream transport), then send raw via SES
-    const streamTransport = nodemailer.createTransport({ streamTransport: true, newline: "unix" });
+    const streamTransport = nodemailer.createTransport({
+      streamTransport: true,
+      newline: "unix",
+    });
     const mail = await streamTransport.sendMail({
       from: process.env.EMAIL_FROM || "noreply@eccellere.in",
       to: recipientEmail,
       subject: `Your Eccellere Asset: ${assetTitle}`,
-      html: buildEmailHtml(recipientName, assetTitle, recipientEmail, ext),
-      attachments: [{ filename: attachmentName, content: attachmentBuffer }],
+      html: buildEmailHtml(recipientName, assetTitle, downloadUrl, baseUrl),
     });
 
-    // Collect the MIME stream into a buffer
     const chunks: Buffer[] = [];
     await new Promise<void>((resolve, reject) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -145,25 +117,21 @@ export async function POST(request: NextRequest) {
     });
     await sesClient.send(new SendRawEmailCommand({ RawMessage: { Data: rawMessage } }));
   } else {
-    // Dev: log and skip actual send
     console.log(
-      `\n[send-email] DEV MODE — would send "${attachmentName}" (${attachmentBuffer.length} bytes)`,
-      `to ${recipientEmail} with password "${password}"\n`
+      `\n[send-email] DEV MODE — would email link to ${recipientEmail}\n  ${downloadUrl}\n`
     );
   }
 
   return NextResponse.json({ success: true, sentTo: recipientEmail });
 }
 
-function buildEmailHtml(name: string, assetTitle: string, email: string, ext: string): string {
-  const isPasswordProtected = [".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt"].includes(ext);
-  const passwordNote = isPasswordProtected
-    ? `<p style="margin:16px 0;padding:16px;background:#fdf8ec;border-left:4px solid #c9a84c;font-family:monospace;">
-         <strong>Document password:</strong> ${email}
-       </p>
-       <p style="margin:8px 0;font-size:13px;color:#666;">Use your registered email address as the password to open the document.</p>`
-    : "";
-
+function buildEmailHtml(
+  name: string,
+  assetTitle: string,
+  downloadUrl: string,
+  baseUrl: string
+): string {
+  const site = baseUrl.replace(/\/$/, "");
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"/></head>
@@ -173,15 +141,27 @@ function buildEmailHtml(name: string, assetTitle: string, email: string, ext: st
   </div>
   <p style="margin:0 0 12px;">Dear ${escapeHtml(name)},</p>
   <p style="margin:0 0 16px;">
-    Please find your purchased asset <strong>${escapeHtml(assetTitle)}</strong> attached to this email.
+    Your purchased asset <strong>${escapeHtml(assetTitle)}</strong> is ready to download.
   </p>
-  ${passwordNote}
+  <p style="margin:24px 0;text-align:center;">
+    <a href="${downloadUrl}"
+       style="display:inline-block;background:#c9a84c;color:#fff;text-decoration:none;padding:12px 28px;border-radius:4px;font-family:Arial,sans-serif;font-size:14px;font-weight:600;">
+      Download Asset
+    </a>
+  </p>
+  <p style="margin:8px 0;font-size:13px;color:#666;">
+    This download link is valid for 7 days and is unique to you. Please do not share it.
+  </p>
   <p style="margin:24px 0 8px;font-size:13px;color:#666;">
-    If you have any questions, reply to this email or contact us at
+    You can also download this asset any time from your
+    <a href="${site}/dashboard/library" style="color:#c9a84c;">Library</a>.
+  </p>
+  <p style="margin:8px 0;font-size:13px;color:#666;">
+    Questions? Reply to this email or contact
     <a href="mailto:support@eccellere.in" style="color:#c9a84c;">support@eccellere.in</a>.
   </p>
   <div style="border-top:1px solid #e5e7eb;margin-top:32px;padding-top:16px;font-size:12px;color:#999;">
-    © 2025 Eccellere Management Consulting · Bengaluru · www.eccellere.in
+    © 2026 Eccellere Management Consulting · Bengaluru · www.eccellere.in
   </div>
 </body>
 </html>`;

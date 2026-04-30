@@ -25,8 +25,12 @@ function b64urlDecode(s: string): Buffer {
   return Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(pad), "base64");
 }
 
-export function signAssetToken(assetId: string, userId: string): string {
-  const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS;
+export function signAssetToken(
+  assetId: string,
+  userId: string,
+  ttlSeconds: number = TOKEN_TTL_SECONDS
+): string {
+  const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
   const payload = JSON.stringify({ a: assetId, u: userId, e: exp });
   const payloadB64 = b64url(Buffer.from(payload, "utf8"));
   const sig = crypto.createHmac("sha256", getSecret()).update(payloadB64).digest();

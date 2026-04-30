@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { User, Building2, CreditCard, Bell, Lock, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,14 +25,95 @@ const SECTORS = [
 
 const SIZES = ["1–10", "11–50", "51–200", "201–500", "500+"];
 
+type ProfileForm = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  companyName: string;
+  sector: string;
+  employeeRange: string;
+  gstin: string;
+};
+
+const EMPTY_FORM: ProfileForm = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  city: "",
+  state: "",
+  companyName: "",
+  sector: "",
+  employeeRange: "",
+  gstin: "",
+};
+
+function getInitials(firstName: string, lastName: string): string {
+  const f = (firstName || "").trim()[0] || "";
+  const l = (lastName || "").trim()[0] || "";
+  const initials = (f + l).toUpperCase();
+  return initials || "U";
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<ProfileForm>(EMPTY_FORM);
 
-  function handleSave(e: React.FormEvent) {
+  useEffect(() => {
+    fetch("/api/dashboard/profile")
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
+      .then((data) => {
+        const u = data.user ?? {};
+        const cp = data.clientProfile ?? {};
+        setForm({
+          firstName: u.firstName ?? "",
+          lastName: u.lastName ?? "",
+          email: u.email ?? "",
+          phone: u.phone ?? "",
+          city: cp.city ?? "",
+          state: cp.state ?? "",
+          companyName: cp.companyName ?? "",
+          sector: cp.sector ?? "",
+          employeeRange: cp.employeeRange ?? "",
+          gstin: cp.gstin ?? "",
+        });
+      })
+      .catch(() => setError("Could not load profile"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function update<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/dashboard/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Failed to save");
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -78,38 +159,55 @@ export default function SettingsPage() {
                 {/* Avatar */}
                 <div className="mt-5 flex items-center gap-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-eccellere-gold text-xl font-semibold text-white">
-                    RK
+                    {getInitials(form.firstName, form.lastName)}
                   </div>
                   <Button type="button" variant="outline" size="sm" className="text-xs">
                     Change Photo
                   </Button>
                 </div>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  {[
-                    { id: "firstName", label: "First Name", value: "Rahul" },
-                    { id: "lastName", label: "Last Name", value: "Kumar" },
-                    { id: "email", label: "Email Address", value: "rahul.kumar@example.com", type: "email" },
-                    { id: "phone", label: "Phone", value: "+91 98765 43210" },
-                    { id: "city", label: "City", value: "Bengaluru" },
-                    { id: "state", label: "State", value: "Karnataka" },
-                  ].map((f) => (
-                    <div key={f.id}>
-                      <label htmlFor={f.id} className="block text-xs font-medium uppercase tracking-wider text-ink-light">
-                        {f.label}
-                      </label>
-                      <input
-                        id={f.id}
-                        type={f.type ?? "text"}
-                        defaultValue={f.value}
-                        className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-                      />
-                    </div>
-                  ))}
-                </div>
+                {loading ? (
+                  <p className="mt-6 text-sm text-ink-light">Loading…</p>
+                ) : (
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                    {(
+                      [
+                        { id: "firstName", label: "First Name", type: "text", readOnly: false },
+                        { id: "lastName", label: "Last Name", type: "text", readOnly: false },
+                        { id: "email", label: "Email Address", type: "email", readOnly: true },
+                        { id: "phone", label: "Phone", type: "text", readOnly: false },
+                        { id: "city", label: "City", type: "text", readOnly: false },
+                        { id: "state", label: "State", type: "text", readOnly: false },
+                      ] as const
+                    ).map((f) => (
+                      <div key={f.id}>
+                        <label
+                          htmlFor={f.id}
+                          className="block text-xs font-medium uppercase tracking-wider text-ink-light"
+                        >
+                          {f.label}
+                        </label>
+                        <input
+                          id={f.id}
+                          type={f.type}
+                          value={form[f.id as keyof ProfileForm]}
+                          onChange={(e) => update(f.id as keyof ProfileForm, e.target.value)}
+                          readOnly={f.readOnly}
+                          className={cn(
+                            "mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold",
+                            f.readOnly && "cursor-not-allowed opacity-70"
+                          )}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-3">
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit" disabled={submitting || loading}>
+                  {submitting ? "Saving…" : "Save Changes"}
+                </Button>
                 {saved && <span className="text-sm text-eccellere-teal">✓ Saved successfully</span>}
+                {error && <span className="text-sm text-eccellere-error">{error}</span>}
               </div>
             </form>
           )}
@@ -119,69 +217,94 @@ export default function SettingsPage() {
             <form onSubmit={handleSave} className="space-y-6">
               <div className="rounded-lg bg-white p-6 shadow-sm">
                 <h2 className="text-sm font-medium text-eccellere-ink">Business Details</h2>
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
-                      Company Name
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="Kumar Manufacturing Pvt Ltd"
-                      className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
-                      Sector
-                    </label>
-                    <div className="relative mt-1.5">
-                      <select className="w-full appearance-none rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold">
-                        {SECTORS.map((s) => (
-                          <option key={s} selected={s === "Manufacturing"}>{s}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-light" />
+                {loading ? (
+                  <p className="mt-5 text-sm text-ink-light">Loading…</p>
+                ) : (
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        value={form.companyName}
+                        onChange={(e) => update("companyName", e.target.value)}
+                        className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                        Sector
+                      </label>
+                      <div className="relative mt-1.5">
+                        <select
+                          value={form.sector}
+                          onChange={(e) => update("sector", e.target.value)}
+                          className="w-full appearance-none rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                        >
+                          {form.sector && !SECTORS.includes(form.sector) && (
+                            <option value={form.sector}>{form.sector}</option>
+                          )}
+                          {!form.sector && <option value="">Select sector</option>}
+                          {SECTORS.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-light" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                        Company Size
+                      </label>
+                      <div className="relative mt-1.5">
+                        <select
+                          value={form.employeeRange}
+                          onChange={(e) => update("employeeRange", e.target.value)}
+                          className="w-full appearance-none rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                        >
+                          {form.employeeRange && !SIZES.includes(form.employeeRange) && (
+                            <option value={form.employeeRange}>{form.employeeRange}</option>
+                          )}
+                          {!form.employeeRange && <option value="">Select size</option>}
+                          {SIZES.map((s) => (
+                            <option key={s} value={s}>{s} employees</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-light" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                        GSTIN
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="29ABCDE1234F1Z5"
+                        value={form.gstin}
+                        onChange={(e) => update("gstin", e.target.value)}
+                        className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
+                        Website
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://yourcompany.com"
+                        className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                      />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
-                      Company Size
-                    </label>
-                    <div className="relative mt-1.5">
-                      <select className="w-full appearance-none rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold">
-                        {SIZES.map((s) => (
-                          <option key={s} selected={s === "51–200"}>{s} employees</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-light" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
-                      GSTIN
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="29ABCDE1234F1Z5"
-                      defaultValue="29AKMPK4321B1Z3"
-                      className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium uppercase tracking-wider text-ink-light">
-                      Website
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://yourcompany.com"
-                      className="mt-1.5 w-full rounded border border-eccellere-ink/15 bg-eccellere-cream px-3 py-2.5 text-sm text-eccellere-ink focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-                    />
-                  </div>
-                </div>
+                )}
               </div>
               <div className="flex items-center gap-3">
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit" disabled={submitting || loading}>
+                  {submitting ? "Saving…" : "Save Changes"}
+                </Button>
                 {saved && <span className="text-sm text-eccellere-teal">✓ Saved successfully</span>}
+                {error && <span className="text-sm text-eccellere-error">{error}</span>}
               </div>
             </form>
           )}

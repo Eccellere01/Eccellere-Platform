@@ -5,7 +5,7 @@ import Link from "next/link";
 import React from "react";
 import {
   IndianRupee, BookOpen, ShoppingBag, Star, ArrowUpRight,
-  Download, ClipboardList, Clock, CheckCircle, TrendingUp, Loader2,
+  ClipboardList, Clock, CheckCircle, TrendingUp, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -254,8 +254,6 @@ export default function DashboardPage() {
         ) : (
           <div className="divide-y divide-eccellere-ink/5">
             {recentAssets.map((asset) => {
-              const format = Array.isArray(asset.components) && asset.components.length > 0
-                ? asset.components[0] : "Download";
               return (
                 <div key={asset.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -282,12 +280,6 @@ export default function DashboardPage() {
                       <Link href={`/marketplace/${asset.slug}`}>
                         View Details
                       </Link>
-                    </Button>
-                    <Button asChild size="sm" className="flex items-center gap-1.5 bg-eccellere-gold text-xs text-white hover:bg-eccellere-gold/90">
-                      <a href={`/api/dashboard/download/${asset.id}`} download>
-                        <Download className="h-3.5 w-3.5" />
-                        {format}
-                      </a>
                     </Button>
                   </div>
                 </div>

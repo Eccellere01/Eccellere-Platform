@@ -170,16 +170,6 @@ export default function OrdersPage() {
                           View <ArrowUpRight className="h-3 w-3" />
                         </Link>
                       )}
-                      {order.status === "completed" && (
-                        <a
-                          href={`/api/dashboard/download/${order.assetId}`}
-                          download
-                          className="flex items-center gap-1 text-xs text-eccellere-ink hover:text-eccellere-gold"
-                        >
-                          <Download className="h-3 w-3" />
-                          Download
-                        </a>
-                      )}
                       {order.invoice && order.invoiceUrl && (
                         <a
                           href={order.invoiceUrl}

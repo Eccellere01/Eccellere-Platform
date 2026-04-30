@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -20,6 +20,13 @@ import {
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
+function getInitials(name: string | null | undefined): string {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "My Library", href: "/dashboard/library", icon: BookOpen },
@@ -33,6 +40,20 @@ const navItems = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userName, setUserName] = useState<string>("Account");
+  const [plan, setPlan] = useState<string>("Client");
+
+  useEffect(() => {
+    fetch("/api/dashboard/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.name) setUserName(data.user.name);
+        if (data?.user?.planLabel) setPlan(data.user.planLabel);
+      })
+      .catch(() => {});
+  }, []);
+
+  const initials = getInitials(userName);
 
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
     <aside
@@ -56,11 +77,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* User pill */}
       <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-eccellere-gold text-sm font-semibold text-white">
-          RK
+          {initials}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-white">Rahul Kumar</p>
-          <p className="truncate text-[11px] text-white/50">Growth Plan</p>
+          <p className="truncate text-sm font-medium text-white">{userName}</p>
+          <p className="truncate text-[11px] text-white/50">{plan}</p>
         </div>
       </div>
 
@@ -146,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-eccellere-gold" />
             </button>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-eccellere-gold text-xs font-semibold text-white">
-              RK
+              {initials}
             </div>
           </div>
         </header>
