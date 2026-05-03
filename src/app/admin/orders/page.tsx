@@ -334,18 +334,6 @@ export default function AdminOrders() {
   );
 }
 
-type Order = {
-  id: string;
-  orderNumber: string;
-  client: string;
-  email: string;
-  asset: string;
-  amount: string;
-  status: string;
-  payment: string;
-  date: string;
-};
-
 const statusColors: Record<string, string> = {
   paid: "bg-eccellere-teal/10 text-eccellere-teal",
   pending: "bg-eccellere-gold/10 text-eccellere-gold",
