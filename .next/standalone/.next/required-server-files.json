@@ -312,7 +312,14 @@
     ],
     "turbopack": {
       "root": "D:\\Eccellere\\Eccellere AI\\eccellere"
-    }
+    },
+    "_originalRedirects": [
+      {
+        "source": "/services/agentic-ai",
+        "destination": "/agentic-ai",
+        "permanent": true
+      }
+    ]
   },
   "appDir": "D:\\Eccellere\\Eccellere AI\\eccellere",
   "relativeAppDir": "",
