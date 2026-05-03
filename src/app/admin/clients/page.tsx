@@ -1,22 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, ChevronLeft, Filter, MoreHorizontal } from "lucide-react";
+import { Search, ChevronLeft, Filter, MoreHorizontal, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const clients = [
-  { id: "CLT-001", name: "Arjun Textiles Pvt Ltd", sector: "Manufacturing", status: "active", plan: "Growth", revenue: "₹1,24,500", joined: "Jan 2026" },
-  { id: "CLT-002", name: "FreshBasket D2C", sector: "Retail", status: "active", plan: "Enterprise", revenue: "₹3,45,000", joined: "Nov 2025" },
-  { id: "CLT-003", name: "SwiftShip Logistics", sector: "Logistics", status: "active", plan: "Growth", revenue: "₹87,000", joined: "Feb 2026" },
-  { id: "CLT-004", name: "Precision Auto Components", sector: "Manufacturing", status: "active", plan: "Enterprise", revenue: "₹5,12,000", joined: "Sep 2025" },
-  { id: "CLT-005", name: "NatureCraft Organics", sector: "Consumer Products", status: "onboarding", plan: "Starter", revenue: "₹12,500", joined: "Mar 2026" },
-  { id: "CLT-006", name: "UrbanEats Cloud Kitchen", sector: "Retail", status: "active", plan: "Growth", revenue: "₹67,800", joined: "Dec 2025" },
-  { id: "CLT-007", name: "GreenPack Solutions", sector: "Manufacturing", status: "churned", plan: "Starter", revenue: "₹24,000", joined: "Aug 2025" },
-  { id: "CLT-008", name: "QuickComm Delivery", sector: "Logistics", status: "active", plan: "Growth", revenue: "₹1,56,000", joined: "Oct 2025" },
-  { id: "CLT-009", name: "Vedic Wellness Co", sector: "Consumer Products", status: "onboarding", plan: "Starter", revenue: "₹0", joined: "Apr 2026" },
-  { id: "CLT-010", name: "MetalWorks India", sector: "Manufacturing", status: "active", plan: "Enterprise", revenue: "₹4,87,000", joined: "Jul 2025" },
-];
+// One sample row — shown only when no real clients have registered yet
+const SAMPLE_CLIENT = {
+  id: "SAMPLE",
+  name: "Arjun Textiles Pvt Ltd (sample)",
+  email: "sample@example.com",
+  sector: "Manufacturing",
+  status: "active",
+  plan: "Growth",
+  revenue: "₹1,24,500",
+  joined: "Jan 2026",
+  city: "",
+  state: "",
+};
+
+type Client = {
+  id: string;
+  name: string;
+  email: string;
+  sector: string;
+  status: string;
+  plan: string;
+  revenue: string;
+  joined: string;
+  city?: string;
+  state?: string;
+};
 
 const statusColors: Record<string, string> = {
   active: "bg-eccellere-teal/10 text-eccellere-teal",
@@ -25,14 +39,44 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AdminClients() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterSector, setFilterSector] = useState("all");
 
-  const filtered = clients.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.id.toLowerCase().includes(search.toLowerCase());
+  const fetchClients = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/clients");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setClients(data.clients ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load clients");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchClients(); }, [fetchClients]);
+
+  // Show sample row only when DB returned zero real clients
+  const displayClients: Client[] = clients.length === 0 && !loading && !error
+    ? [SAMPLE_CLIENT]
+    : clients;
+
+  const filtered = displayClients.filter((c) => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.email?.toLowerCase().includes(search.toLowerCase()) ||
+      c.id.toLowerCase().includes(search.toLowerCase());
     const matchesSector = filterSector === "all" || c.sector === filterSector;
     return matchesSearch && matchesSector;
   });
+
+  const isSampleOnly = clients.length === 0 && !loading && !error;
 
   return (
     <div className="min-h-screen bg-eccellere-cream">
@@ -42,103 +86,148 @@ export default function AdminClients() {
             <ChevronLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-lg font-medium text-eccellere-ink">Clients</h1>
-          <span className="rounded-full bg-eccellere-gold/10 px-2 py-0.5 text-xs text-eccellere-gold">
-            {clients.length}
-          </span>
+          {!loading && (
+            <span className="rounded-full bg-eccellere-gold/10 px-2 py-0.5 text-xs text-eccellere-gold">
+              {clients.length}
+            </span>
+          )}
+          <button
+            onClick={fetchClients}
+            className="ml-auto rounded p-1.5 text-ink-light hover:bg-eccellere-cream hover:text-eccellere-ink"
+            title="Refresh"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </button>
         </div>
       </header>
 
       <main className="mx-auto max-w-[1280px] px-6 py-8">
-        {/* Filters */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 sm:max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-light" />
-            <input
-              type="text"
-              placeholder="Search clients..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-md border border-eccellere-ink/10 bg-white py-2.5 pl-10 pr-4 text-sm placeholder:text-ink-light focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
-            />
+
+        {/* Error state */}
+        {error && (
+          <div className="mb-4 rounded-md border border-eccellere-error/30 bg-eccellere-error/5 px-4 py-3 text-sm text-eccellere-error">
+            Failed to load clients: {error}.{" "}
+            <button onClick={fetchClients} className="underline hover:no-underline">
+              Retry
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-ink-light" />
-            {["all", "Manufacturing", "Retail", "Logistics", "Consumer Products"].map((s) => (
-              <button
-                key={s}
-                onClick={() => setFilterSector(s)}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                  filterSector === s
-                    ? "bg-eccellere-gold text-white"
-                    : "bg-white text-ink-mid hover:bg-eccellere-cream"
-                )}
-              >
-                {s === "all" ? "All" : s}
-              </button>
+        )}
+
+        {/* Sample-only notice */}
+        {isSampleOnly && (
+          <div className="mb-4 rounded-md border border-eccellere-gold/30 bg-eccellere-gold/5 px-4 py-3 text-sm text-ink-mid">
+            No registered clients yet. Showing one sample row for reference.
+          </div>
+        )}
+
+        {/* Loading skeleton */}
+        {loading && (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-14 animate-pulse rounded-md bg-white" />
             ))}
           </div>
-        </div>
+        )}
 
-        {/* Table */}
-        <div className="mt-6 overflow-hidden rounded-lg bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-eccellere-ink/5">
-                  <th className="px-6 py-3.5 text-left text-[10px] font-medium uppercase tracking-wider text-ink-light">
-                    Client
-                  </th>
-                  <th className="px-6 py-3.5 text-left text-[10px] font-medium uppercase tracking-wider text-ink-light">
-                    Sector
-                  </th>
-                  <th className="px-6 py-3.5 text-left text-[10px] font-medium uppercase tracking-wider text-ink-light">
-                    Status
-                  </th>
-                  <th className="px-6 py-3.5 text-left text-[10px] font-medium uppercase tracking-wider text-ink-light">
-                    Plan
-                  </th>
-                  <th className="px-6 py-3.5 text-right text-[10px] font-medium uppercase tracking-wider text-ink-light">
-                    Revenue
-                  </th>
-                  <th className="px-6 py-3.5 text-right text-[10px] font-medium uppercase tracking-wider text-ink-light">
-                    Joined
-                  </th>
-                  <th className="w-10" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-eccellere-ink/5">
-                {filtered.map((client) => (
-                  <tr key={client.id} className="transition-colors hover:bg-eccellere-cream/50">
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-eccellere-ink">{client.name}</p>
-                      <p className="text-xs text-ink-light">{client.id}</p>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-ink-mid">{client.sector}</td>
-                    <td className="px-6 py-4">
-                      <span className={cn("rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider", statusColors[client.status])}>
-                        {client.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-ink-mid">{client.plan}</td>
-                    <td className="px-6 py-4 text-right font-mono text-sm text-eccellere-ink">{client.revenue}</td>
-                    <td className="px-6 py-4 text-right text-xs text-ink-light">{client.joined}</td>
-                    <td className="px-4 py-4">
-                      <button className="rounded p-1 text-ink-light hover:bg-eccellere-cream hover:text-eccellere-ink">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
+        {/* Filters + Table */}
+        {!loading && (
+          <>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 sm:max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-light" />
+                <input
+                  type="text"
+                  placeholder="Search clients..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full rounded-md border border-eccellere-ink/10 bg-white py-2.5 pl-10 pr-4 text-sm placeholder:text-ink-light focus:border-eccellere-gold focus:outline-none focus:ring-1 focus:ring-eccellere-gold"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-ink-light" />
+                {["all", "Manufacturing", "Retail", "Logistics", "Consumer Products"].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setFilterSector(s)}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                      filterSector === s
+                        ? "bg-eccellere-gold text-white"
+                        : "bg-white text-ink-mid hover:bg-eccellere-cream"
+                    )}
+                  >
+                    {s === "all" ? "All" : s}
+                  </button>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          {filtered.length === 0 && (
-            <div className="py-12 text-center text-sm text-ink-light">
-              No clients match your search.
+              </div>
             </div>
-          )}
-        </div>
+
+            <div className="mt-6 overflow-hidden rounded-lg bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-eccellere-ink/5">
+                      <th className="px-6 py-3.5 text-left text-[10px] font-medium uppercase tracking-wider text-ink-light">
+                        Client
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-[10px] font-medium uppercase tracking-wider text-ink-light">
+                        Sector
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-[10px] font-medium uppercase tracking-wider text-ink-light">
+                        Status
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-[10px] font-medium uppercase tracking-wider text-ink-light">
+                        Plan
+                      </th>
+                      <th className="px-6 py-3.5 text-right text-[10px] font-medium uppercase tracking-wider text-ink-light">
+                        Revenue
+                      </th>
+                      <th className="px-6 py-3.5 text-right text-[10px] font-medium uppercase tracking-wider text-ink-light">
+                        Joined
+                      </th>
+                      <th className="w-10" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-eccellere-ink/5">
+                    {filtered.map((client) => (
+                      <tr
+                        key={client.id}
+                        className={cn(
+                          "transition-colors hover:bg-eccellere-cream/50",
+                          client.id === "SAMPLE" && "opacity-50 italic"
+                        )}
+                      >
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-eccellere-ink">{client.name}</p>
+                          <p className="text-xs text-ink-light">{client.email}</p>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-ink-mid">{client.sector}</td>
+                        <td className="px-6 py-4">
+                          <span className={cn("rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider", statusColors[client.status] ?? "bg-ink-light/10 text-ink-light")}>
+                            {client.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-ink-mid">{client.plan}</td>
+                        <td className="px-6 py-4 text-right font-mono text-sm text-eccellere-ink">{client.revenue}</td>
+                        <td className="px-6 py-4 text-right text-xs text-ink-light">{client.joined}</td>
+                        <td className="px-4 py-4">
+                          <button className="rounded p-1 text-ink-light hover:bg-eccellere-cream hover:text-eccellere-ink">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filtered.length === 0 && !isSampleOnly && (
+                <div className="py-12 text-center text-sm text-ink-light">
+                  No clients match your search.
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

@@ -148,10 +148,22 @@ export async function PATCH(req: NextRequest) {
   // Verify the asset belongs to this specialist
   const user = await prisma.user.findUnique({
     where: { email: session.user.email! },
-    select: { specialistProfile: { select: { id: true } } },
+    select: { specialistProfile: { select: { id: true, status: true } } },
   });
   if (!user?.specialistProfile) {
     return NextResponse.json({ error: "Specialist profile not found" }, { status: 404 });
+  }
+
+  // Only APPROVED or ACTIVE specialists (and SPECIALIST_ADMIN) can upload files
+  const approvedStatuses = ["APPROVED", "ACTIVE"];
+  if (
+    session.user.role !== "SPECIALIST_ADMIN" &&
+    !approvedStatuses.includes(user.specialistProfile.status as string)
+  ) {
+    return NextResponse.json(
+      { error: "Your specialist profile must be approved before you can upload asset files." },
+      { status: 403 }
+    );
   }
 
   const asset = await prisma.asset.findFirst({
@@ -277,6 +289,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Specialist profile not found" }, { status: 404 });
   }
 
+  // Only APPROVED or ACTIVE specialists (and SPECIALIST_ADMIN) can post assets
+  const approvedStatuses = ["APPROVED", "ACTIVE"];
+  if (
+    session.user.role !== "SPECIALIST_ADMIN" &&
+    !approvedStatuses.includes(user.specialistProfile.status as string)
+  ) {
+    return NextResponse.json(
+      { error: "Your specialist profile must be approved before you can post assets on the marketplace." },
+      { status: 403 }
+    );
+  }
+
   const slug = `${title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -331,10 +355,22 @@ export async function PUT(req: NextRequest) {
   // Verify ownership
   const user = await prisma.user.findUnique({
     where: { email: session.user.email! },
-    select: { specialistProfile: { select: { id: true } } },
+    select: { specialistProfile: { select: { id: true, status: true } } },
   });
   if (!user?.specialistProfile) {
     return NextResponse.json({ error: "Specialist profile not found" }, { status: 404 });
+  }
+
+  // Only APPROVED or ACTIVE specialists (and SPECIALIST_ADMIN) can edit assets
+  const approvedStatuses = ["APPROVED", "ACTIVE"];
+  if (
+    session.user.role !== "SPECIALIST_ADMIN" &&
+    !approvedStatuses.includes(user.specialistProfile.status as string)
+  ) {
+    return NextResponse.json(
+      { error: "Your specialist profile must be approved before you can edit assets." },
+      { status: 403 }
+    );
   }
 
   const asset = await prisma.asset.findFirst({

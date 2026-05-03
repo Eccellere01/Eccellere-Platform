@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 const CATEGORIES = [
   "Strategy & Planning",
@@ -47,6 +48,21 @@ export async function POST(req: NextRequest) {
     (session.user?.role !== "SPECIALIST" && session.user?.role !== "SPECIALIST_ADMIN")
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Only APPROVED or ACTIVE specialists (and SPECIALIST_ADMIN) can use the AI generator
+  if (session.user.role !== "SPECIALIST_ADMIN") {
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+      select: { specialistProfile: { select: { status: true } } },
+    });
+    const status = user?.specialistProfile?.status as string | undefined;
+    if (!status || !["APPROVED", "ACTIVE"].includes(status)) {
+      return NextResponse.json(
+        { error: "Your specialist profile must be approved before you can create marketplace assets." },
+        { status: 403 }
+      );
+    }
   }
 
   const groqApiKey = process.env.GROQ_API_KEY;

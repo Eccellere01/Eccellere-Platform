@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -20,6 +20,13 @@ import {
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
+function getInitials(name: string | null | undefined): string {
+  if (!name) return "SP";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 const navItems = [
   { label: "Overview", href: "/specialist", icon: LayoutDashboard },
   { label: "My Assets", href: "/specialist/assets", icon: Package },
@@ -33,6 +40,21 @@ const navItems = [
 export default function SpecialistLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userName, setUserName] = useState<string>("Specialist");
+  const [statusLabel, setStatusLabel] = useState<string>("Active");
+
+  useEffect(() => {
+    if (pathname === "/specialist/register") return;
+    fetch("/api/specialist/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.name) setUserName(data.user.name);
+        if (data?.statusLabel) setStatusLabel(data.statusLabel);
+      })
+      .catch(() => {});
+  }, [pathname]);
+
+  const initials = getInitials(userName);
 
   // Don't wrap the register page in the specialist layout
   if (pathname === "/specialist/register") {
@@ -61,11 +83,11 @@ export default function SpecialistLayout({ children }: { children: React.ReactNo
       {/* User pill */}
       <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-eccellere-teal text-sm font-semibold text-white">
-          SP
+          {initials}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-white">Specialist</p>
-          <p className="truncate text-[11px] text-white/50">Active</p>
+          <p className="truncate text-sm font-medium text-white">{userName}</p>
+          <p className="truncate text-[11px] text-white/50">{statusLabel}</p>
         </div>
       </div>
 
