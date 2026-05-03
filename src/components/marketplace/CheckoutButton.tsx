@@ -48,11 +48,15 @@ interface RazorpayResponse {
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window === "undefined") return resolve(false);
+    // Already loaded and still available
     if (window.Razorpay) return resolve(true);
+    // Remove stale script tag if Razorpay SDK removed itself after modal dismiss
+    const existing = document.querySelector('script[src*="checkout.razorpay.com"]');
+    if (existing) existing.remove();
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
-    script.onload = () => resolve(true);
+    script.onload = () => resolve(!!window.Razorpay);
     script.onerror = () => resolve(false);
     document.head.appendChild(script);
   });
