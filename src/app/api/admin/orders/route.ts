@@ -81,7 +81,7 @@ export async function GET() {
       client: clientName,
       email: o.user.email,
       asset: assetTitle,
-      amount: `₹${(o.totalAmount / 100).toLocaleString("en-IN")}`,
+      amount: `₹${Math.floor(o.totalAmount / 100).toLocaleString("en-IN")}`,
       status: o.status.toLowerCase(),
       payment,
       date: new Date(o.createdAt).toLocaleDateString("en-IN", {
@@ -93,4 +93,62 @@ export async function GET() {
   });
 
   return NextResponse.json({ orders: mapped });
+}
+
+// ── PATCH /api/admin/orders — update order status ────────────────────────────
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || !isAdmin(session.user?.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: { id: string; status: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const validStatuses = ["PENDING", "PAID", "FAILED", "REFUND_REQUESTED", "REFUNDED", "PARTIALLY_REFUNDED", "CANCELLED"];
+  const statusUpper = body.status?.toUpperCase();
+  if (!body.id || !validStatuses.includes(statusUpper)) {
+    return NextResponse.json({ error: "Invalid id or status" }, { status: 400 });
+  }
+
+  try {
+    const updated = await prisma.order.update({
+      where: { id: body.id },
+      data: { status: statusUpper as never, updatedAt: new Date() },
+      select: { id: true, status: true },
+    });
+    return NextResponse.json({ order: updated });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[admin/orders PATCH] error:", message);
+    return NextResponse.json({ error: "Update failed", detail: message }, { status: 500 });
+  }
+}
+
+// ── DELETE /api/admin/orders?id=xxx — delete an order ────────────────────────
+export async function DELETE(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || !isAdmin(session.user?.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  try {
+    await prisma.orderItem.deleteMany({ where: { orderId: id } });
+    await prisma.order.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[admin/orders DELETE] error:", message);
+    return NextResponse.json({ error: "Delete failed", detail: message }, { status: 500 });
+  }
 }
