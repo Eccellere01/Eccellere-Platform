@@ -97,9 +97,12 @@ export async function middleware(request: NextRequest) {
   );
 
   // Cross-Origin policies
-  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
-  response.headers.set("Cross-Origin-Embedder-Policy", "require-corp");
-  response.headers.set("Cross-Origin-Resource-Policy", "same-site");
+  // NOTE: COEP "require-corp" blocks cross-origin scripts without CORP headers
+  // (e.g. Razorpay checkout.js). Use "unsafe-none" to allow third-party
+  // payment/embedding while keeping COOP for window isolation.
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  response.headers.set("Cross-Origin-Embedder-Policy", "unsafe-none");
+  response.headers.set("Cross-Origin-Resource-Policy", "cross-origin");
 
   // ── Cache-Control override for HTML pages ─────────────────────────────────
   // Next.js sets `Cache-Control: s-maxage=31536000` on prerendered pages, which
