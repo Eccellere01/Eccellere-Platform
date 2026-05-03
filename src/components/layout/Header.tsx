@@ -11,7 +11,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "Marketplace", href: "/marketplace" },
-  { label: "Agentic AI", href: "/services/agentic-ai" },
+  { label: "Agentic AI", href: "/agentic-ai" },
   {
     label: "Consulting",
     href: "/services",

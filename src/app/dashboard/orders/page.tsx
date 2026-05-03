@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Search, ArrowUpRight, Download } from "lucide-react";
+import { Search, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_FILTERS = ["All", "Completed", "Processing", "Refunded"];
@@ -131,9 +130,6 @@ export default function OrdersPage() {
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink-light">
                   Status
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink-light">
-                  Actions
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-eccellere-ink/5">
@@ -159,28 +155,6 @@ export default function OrdersPage() {
                     >
                       {order.status}
                     </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
-                      {order.assetSlug && (
-                        <Link
-                          href={`/marketplace/${order.assetSlug}`}
-                          className="flex items-center gap-0.5 text-xs text-eccellere-gold hover:underline"
-                        >
-                          View <ArrowUpRight className="h-3 w-3" />
-                        </Link>
-                      )}
-                      {order.invoice && order.invoiceUrl && (
-                        <a
-                          href={order.invoiceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-ink-light hover:text-eccellere-ink"
-                        >
-                          Invoice
-                        </a>
-                      )}
-                    </div>
                   </td>
                 </tr>
               ))}

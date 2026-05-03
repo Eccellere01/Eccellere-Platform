@@ -3,31 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  Search, ChevronLeft, Filter, Eye, CheckCircle, Clock,
+  Search, ChevronLeft, Filter, CheckCircle, Clock,
   XCircle, Star, Loader2, AlertCircle, Download, DownloadCloud,
   Trash2, RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-// ── Static seed rows (illustration only) ─────────────────────────────────────
-interface StaticAsset {
-  id: string; title: string; specialist: string; category: string;
-  format: string; price: string; status: string; sales: number;
-  rating: number | null; submitted: string;
-}
 
-const STATIC_ASSETS: StaticAsset[] = [
-  { id: "AST-218", title: "MSME Growth Strategy Playbook",        specialist: "Vikram Patel",  category: "Strategy",     format: "PDF",           price: "₹2,499", status: "published", sales: 187, rating: 4.9, submitted: "Sep 2025" },
-  { id: "AST-217", title: "AI Readiness Assessment Toolkit",      specialist: "Vikram Patel",  category: "Agentic AI",   format: "Excel",         price: "₹1,999", status: "published", sales: 142, rating: 4.9, submitted: "Oct 2025" },
-  { id: "AST-216", title: "Lean Manufacturing Implementation Guide", specialist: "Rohit Kapoor", category: "Process",   format: "PDF + Template", price: "₹3,499", status: "published", sales: 98,  rating: 4.7, submitted: "Aug 2025" },
-  { id: "AST-215", title: "E-Commerce Launch Checklist",          specialist: "Meera Rao",    category: "Digital",      format: "Template",      price: "₹999",   status: "published", sales: 234, rating: 4.6, submitted: "Nov 2025" },
-  { id: "AST-219", title: "Digital Transformation Playbook v2",   specialist: "Vikram Patel",  category: "Digital",      format: "PDF",           price: "₹3,499", status: "pending",   sales: 0,   rating: null, submitted: "Apr 2026" },
-  { id: "AST-220", title: "Route Optimisation Framework",         specialist: "Arun Nair",    category: "Logistics",    format: "Excel + PDF",   price: "₹2,999", status: "pending",   sales: 0,   rating: null, submitted: "Apr 2026" },
-  { id: "AST-221", title: "MSME Financial Planning Template",     specialist: "Ananya Desai", category: "Strategy",     format: "Excel",         price: "₹1,499", status: "pending",   sales: 0,   rating: null, submitted: "Apr 2026" },
-  { id: "AST-222", title: "Brand Identity Toolkit for D2C",       specialist: "Karan Singh",  category: "Digital",      format: "PDF + Figma",   price: "₹2,499", status: "pending",   sales: 0,   rating: null, submitted: "Apr 2026" },
-  { id: "AST-200", title: "Basic HR Policy Template",             specialist: "Deepak Verma", category: "Organisation", format: "Word",          price: "₹799",   status: "rejected",  sales: 0,   rating: null, submitted: "Mar 2026" },
-];
 
 // ── Resubmission reason modal ───────────────────────────────────────────────
 function ResubmitModal({
@@ -133,7 +116,6 @@ interface DisplayAsset {
   sales: number;
   rating: number | null;
   submitted: string;
-  isStatic: boolean;
   canAct: boolean;
   canRequestResubmission: boolean;
   canDelete: boolean;
@@ -154,14 +136,7 @@ const DB_STATUS_CFG: Record<string, {
   DRAFT:               { filterStatus: "pending",   label: "Draft",        color: "bg-eccellere-gold/10 text-eccellere-gold",   icon: Clock,       canAct: false, canRequestResubmission: false },
 };
 
-const STATIC_STATUS_CFG: Record<string, {
-  filterStatus: "published" | "pending" | "rejected";
-  color: string; icon: typeof CheckCircle;
-}> = {
-  published: { filterStatus: "published", color: "bg-eccellere-teal/10 text-eccellere-teal",   icon: CheckCircle },
-  pending:   { filterStatus: "pending",   color: "bg-eccellere-gold/10 text-eccellere-gold",   icon: Clock       },
-  rejected:  { filterStatus: "rejected",  color: "bg-eccellere-error/10 text-eccellere-error", icon: XCircle     },
-};
+
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
@@ -186,7 +161,6 @@ function dbToDisplay(a: DbAsset): DisplayAsset {
     sales: a.totalPurchases,
     rating: a.averageRating > 0 ? a.averageRating : null,
     submitted: formatDate(a.createdAt),
-    isStatic: false,
     canAct: cfg.canAct,
     canRequestResubmission: cfg.canRequestResubmission,
     canDelete: true,
@@ -194,30 +168,7 @@ function dbToDisplay(a: DbAsset): DisplayAsset {
   };
 }
 
-function staticToDisplay(a: StaticAsset): DisplayAsset {
-  const cfg = STATIC_STATUS_CFG[a.status] ?? STATIC_STATUS_CFG.pending;
-  return {
-    key: `static-${a.id}`,
-    displayId: a.id,
-    title: a.title,
-    specialist: a.specialist,
-    category: a.category,
-    format: a.format,
-    price: a.price,
-    filterStatus: cfg.filterStatus,
-    statusLabel: a.status.charAt(0).toUpperCase() + a.status.slice(1),
-    statusColor: cfg.color,
-    StatusIcon: cfg.icon,
-    sales: a.sales,
-    rating: a.rating,
-    submitted: a.submitted,
-    isStatic: true,
-    canAct: false,
-    canRequestResubmission: false,
-    canDelete: false,
-    downloadEnabled: true,
-  };
-}
+
 
 export default function AdminAssets() {
   const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
@@ -309,10 +260,7 @@ export default function AdminAssets() {
     }
   }
 
-  const allAssets: DisplayAsset[] = [
-    ...dbAssets.map(dbToDisplay),
-    ...STATIC_ASSETS.map(staticToDisplay),
-  ];
+  const allAssets: DisplayAsset[] = dbAssets.map(dbToDisplay);
 
   const filtered = allAssets.filter((a) => {
     const matchSearch =
@@ -353,7 +301,7 @@ export default function AdminAssets() {
           </Link>
           <h1 className="text-lg font-medium text-eccellere-ink">Assets</h1>
           <span className="rounded-full bg-eccellere-gold/10 px-2 py-0.5 text-xs text-eccellere-gold">
-            {loading ? "…" : dbAssets.length > 0 ? dbAssets.length : STATIC_ASSETS.length}
+            {loading ? "…" : dbAssets.length}
           </span>
           {pendingCount > 0 && (
             <span className="rounded-full bg-eccellere-error/10 px-2 py-0.5 text-xs text-eccellere-error">
@@ -368,7 +316,7 @@ export default function AdminAssets() {
           <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>
-              Could not load live data ({error}) — showing illustration data only.{" "}
+              Could not load assets ({error}).{" "}
               <button onClick={fetchAssets} className="underline hover:no-underline">
                 Retry
               </button>
@@ -430,24 +378,14 @@ export default function AdminAssets() {
                   {filtered.map((asset) => (
                     <tr
                       key={asset.key}
-                      className={cn(
-                        "transition-colors hover:bg-eccellere-cream/50",
-                        asset.isStatic && "opacity-60"
-                      )}
+                      className="transition-colors hover:bg-eccellere-cream/50"
                     >
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <p className="text-sm font-medium text-eccellere-ink">{asset.title}</p>
-                            <p className="text-xs text-ink-light">
-                              {asset.displayId} · {asset.format} · {asset.submitted}
-                            </p>
-                          </div>
-                          {asset.isStatic && (
-                            <span className="rounded bg-eccellere-ink/5 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-ink-light">
-                              sample
-                            </span>
-                          )}
+                        <div>
+                          <p className="text-sm font-medium text-eccellere-ink">{asset.title}</p>
+                          <p className="text-xs text-ink-light">
+                            {asset.displayId} · {asset.format} · {asset.submitted}
+                          </p>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-ink-mid">{asset.specialist}</td>
@@ -477,10 +415,8 @@ export default function AdminAssets() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center justify-end gap-1">
-                          {/* Download enable/disable toggle — only for real DB assets */}
-                          {!asset.isStatic && (
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-1">
                             <button
                               title={asset.downloadEnabled ? "Disable client downloads" : "Enable client downloads"}
                               disabled={actionLoading !== null}
@@ -499,51 +435,45 @@ export default function AdminAssets() {
                                   : <Download className="h-4 w-4 opacity-40" />
                               }
                             </button>
-                          )}
 
-                          {!asset.isStatic && asset.canAct && (
-                            <Button
-                              size="sm"
-                              className="h-7 text-[10px]"
-                              disabled={actionLoading !== null}
-                              onClick={() => handleAction(asset.dbId!, "approve")}
-                            >
-                              {actionLoading === asset.dbId + "approve"
-                                ? <Loader2 className="h-3 w-3 animate-spin" />
-                                : "Approve"}
-                            </Button>
-                          )}
-                          {!asset.isStatic && asset.canRequestResubmission && (
-                            <button
-                              title="Request resubmission"
-                              disabled={actionLoading !== null}
-                              onClick={() => setResubmitTarget({ id: asset.dbId!, title: asset.title })}
-                              className="rounded p-1 text-eccellere-gold hover:bg-eccellere-gold/10 disabled:opacity-50"
-                            >
-                              {actionLoading === asset.dbId + "request-resubmission"
-                                ? <Loader2 className="h-4 w-4 animate-spin" />
-                                : <RefreshCw className="h-4 w-4" />}
-                            </button>
-                          )}
-                          {!asset.isStatic && asset.canDelete && (
-                            <button
-                              title="Delete asset"
-                              disabled={actionLoading !== null}
-                              onClick={() => setDeleteTarget({ id: asset.dbId!, title: asset.title })}
-                              className="rounded p-1 text-eccellere-error hover:bg-eccellere-error/10 disabled:opacity-50"
-                            >
-                              {actionLoading === asset.dbId + "delete"
-                                ? <Loader2 className="h-4 w-4 animate-spin" />
-                                : <Trash2 className="h-4 w-4" />}
-                            </button>
-                          )}
-                          {asset.isStatic && (
-                            <button className="rounded p-1 text-ink-light hover:bg-eccellere-cream hover:text-eccellere-ink">
-                              <Eye className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                            {asset.canAct && (
+                              <Button
+                                size="sm"
+                                className="h-7 text-[10px]"
+                                disabled={actionLoading !== null}
+                                onClick={() => handleAction(asset.dbId!, "approve")}
+                              >
+                                {actionLoading === asset.dbId + "approve"
+                                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                                  : "Approve"}
+                              </Button>
+                            )}
+                            {asset.canRequestResubmission && (
+                              <button
+                                title="Request resubmission"
+                                disabled={actionLoading !== null}
+                                onClick={() => setResubmitTarget({ id: asset.dbId!, title: asset.title })}
+                                className="rounded p-1 text-eccellere-gold hover:bg-eccellere-gold/10 disabled:opacity-50"
+                              >
+                                {actionLoading === asset.dbId + "request-resubmission"
+                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  : <RefreshCw className="h-4 w-4" />}
+                              </button>
+                            )}
+                            {asset.canDelete && (
+                              <button
+                                title="Delete asset"
+                                disabled={actionLoading !== null}
+                                onClick={() => setDeleteTarget({ id: asset.dbId!, title: asset.title })}
+                                className="rounded p-1 text-eccellere-error hover:bg-eccellere-error/10 disabled:opacity-50"
+                              >
+                                {actionLoading === asset.dbId + "delete"
+                                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                                  : <Trash2 className="h-4 w-4" />}
+                              </button>
+                            )}
+                          </div>
+                        </td>
                     </tr>
                   ))}
                 </tbody>

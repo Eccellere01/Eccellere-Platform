@@ -18,6 +18,21 @@ const specSectorOptions = ["Manufacturing", "Retail", "Consumer Products", "Logi
 const engagementOptions = ["Framework contributions", "Assignments", "Training", "Peer reviews"];
 const availabilityOptions = ["Full-time", "Part-time", "Weekends", "Ad-hoc"];
 
+/* Base64-encode the JSON payload so Hostinger ModSec WAF doesn't flag
+   characters like <, >, --, ## inside form values (revenue ranges, passwords,
+   bios, etc.). The server unwraps {d: "..."} envelopes automatically. */
+function encodePayload(payload: unknown): string {
+  const json = JSON.stringify(payload);
+  if (typeof window !== "undefined" && typeof window.btoa === "function") {
+    // Handle UTF-8 (₹, –, etc.) safely.
+    const utf8 = new TextEncoder().encode(json);
+    let binary = "";
+    for (let i = 0; i < utf8.length; i++) binary += String.fromCharCode(utf8[i]);
+    return window.btoa(binary);
+  }
+  return Buffer.from(json, "utf8").toString("base64");
+}
+
 export default function RegisterPage() {
   const [role, setRole] = useState<"" | "CLIENT" | "SPECIALIST">("");
   const [step, setStep] = useState(1);
@@ -64,19 +79,20 @@ export default function RegisterPage() {
     setSubmitting(true);
     setError("");
     try {
+      const payload = {
+        email: client.email, password: client.password, name: client.name,
+        phone: client.phone, role: "CLIENT",
+        profile: {
+          companyName: client.companyName, businessType: client.businessType,
+          sector: client.sector, revenueRange: client.revenueRange,
+          employeeRange: client.employeeRange, city: client.city, state: client.state,
+          challenges: client.challenges, referralSource: client.referralSource,
+        },
+      };
       const res = await fetch("/api/account/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: client.email, password: client.password, name: client.name,
-          phone: client.phone, role: "CLIENT",
-          profile: {
-            companyName: client.companyName, businessType: client.businessType,
-            sector: client.sector, revenueRange: client.revenueRange,
-            employeeRange: client.employeeRange, city: client.city, state: client.state,
-            challenges: client.challenges, referralSource: client.referralSource,
-          },
-        }),
+        body: JSON.stringify({ d: encodePayload(payload) }),
       });
       if (!res.ok) {
         const contentType = res.headers.get("content-type") ?? "";
@@ -99,21 +115,22 @@ export default function RegisterPage() {
     setSubmitting(true);
     setError("");
     try {
+      const payload = {
+        email: spec.email, password: spec.password, name: spec.name, role: "SPECIALIST",
+        profile: {
+          linkedinUrl: spec.linkedinUrl, currentRole: spec.currentRole,
+          organisation: spec.organisation, experienceYears: spec.experienceYears,
+          bio: spec.bio, serviceDomains: spec.serviceDomains,
+          sectorExpertise: spec.sectorExpertise, engagementTypes: spec.engagementTypes,
+          availability: spec.availability,
+          hourlyRateMin: spec.hourlyRateMin ? parseInt(spec.hourlyRateMin) : undefined,
+          hourlyRateMax: spec.hourlyRateMax ? parseInt(spec.hourlyRateMax) : undefined,
+        },
+      };
       const res = await fetch("/api/account/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: spec.email, password: spec.password, name: spec.name, role: "SPECIALIST",
-          profile: {
-            linkedinUrl: spec.linkedinUrl, currentRole: spec.currentRole,
-            organisation: spec.organisation, experienceYears: spec.experienceYears,
-            bio: spec.bio, serviceDomains: spec.serviceDomains,
-            sectorExpertise: spec.sectorExpertise, engagementTypes: spec.engagementTypes,
-            availability: spec.availability,
-            hourlyRateMin: spec.hourlyRateMin ? parseInt(spec.hourlyRateMin) : undefined,
-            hourlyRateMax: spec.hourlyRateMax ? parseInt(spec.hourlyRateMax) : undefined,
-          },
-        }),
+        body: JSON.stringify({ d: encodePayload(payload) }),
       });
       if (!res.ok) {
         const contentType = res.headers.get("content-type") ?? "";

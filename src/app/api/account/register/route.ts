@@ -4,8 +4,47 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { email, password, name, phone, role, profile } = body;
+    const raw = await request.json();
+    // WAF-safe envelope: client may send { d: base64(JSON.stringify(payload)) } to
+    // bypass Hostinger ModSec rules that flag characters like <, >, --, ##.
+    let body: Record<string, unknown> = raw;
+    if (raw && typeof raw === "object" && typeof raw.d === "string" && Object.keys(raw).length === 1) {
+      try {
+        const decoded = Buffer.from(raw.d, "base64").toString("utf8");
+        body = JSON.parse(decoded);
+      } catch {
+        return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+      }
+    }
+    const { email, password, name, phone, role, profile } = body as {
+      email?: string;
+      password?: string;
+      name?: string;
+      phone?: string;
+      role?: string;
+      profile?: Record<string, unknown> & {
+        companyName?: string;
+        businessType?: string;
+        sector?: string;
+        revenueRange?: string;
+        employeeRange?: string;
+        city?: string;
+        state?: string;
+        challenges?: string[];
+        referralSource?: string;
+        linkedinUrl?: string;
+        currentRole?: string;
+        organisation?: string;
+        experienceYears?: string;
+        bio?: string;
+        serviceDomains?: string[];
+        sectorExpertise?: string[];
+        engagementTypes?: string[];
+        availability?: string;
+        hourlyRateMin?: number;
+        hourlyRateMax?: number;
+      };
+    };
 
     if (!email || !password || !name) {
       return NextResponse.json(

@@ -83,39 +83,93 @@ export async function POST(request: NextRequest) {
   const recipientName = user.name ?? "Client";
   const assetTitle = asset.title;
 
-  const isProduction = process.env.EMAIL_PROVIDER === "ses";
+  // Pick email backend by env: SMTP > SES > none.
+  // SMTP is detected by SMTP_HOST being set; SES by EMAIL_PROVIDER=ses.
+  const provider = process.env.SMTP_HOST
+    ? "smtp"
+    : process.env.EMAIL_PROVIDER === "ses"
+    ? "ses"
+    : "none";
 
-  if (isProduction) {
-    const require = createRequire(import.meta.url);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodemailer = require("nodemailer") as any;
-    const { SESClient, SendRawEmailCommand } = await import("@aws-sdk/client-ses");
+  if (provider === "none" && process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      {
+        error:
+          "Email service is not configured. Please contact support@eccellere.in to receive your asset link.",
+      },
+      { status: 503 }
+    );
+  }
 
-    const streamTransport = nodemailer.createTransport({
-      streamTransport: true,
-      newline: "unix",
-    });
-    const mail = await streamTransport.sendMail({
-      from: process.env.EMAIL_FROM || "noreply@eccellere.in",
-      to: recipientEmail,
-      subject: `Your Eccellere Asset: ${assetTitle}`,
-      html: buildEmailHtml(recipientName, assetTitle, downloadUrl, baseUrl),
-    });
+  const subject = `Your Eccellere Asset: ${assetTitle}`;
+  const html = buildEmailHtml(recipientName, assetTitle, downloadUrl, baseUrl);
+  const from = process.env.EMAIL_FROM || "noreply@eccellere.in";
 
-    const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
+  if (provider === "smtp") {
+    try {
+      const require = createRequire(import.meta.url);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const stream = (mail as any).message;
-      stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-      stream.on("end", () => resolve());
-      stream.on("error", reject);
-    });
-    const rawMessage = Buffer.concat(chunks);
+      const nodemailer = require("nodemailer") as any;
+      const port = parseInt(process.env.SMTP_PORT || "465", 10);
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port,
+        // 465 → implicit TLS; 587/25 → STARTTLS
+        secure: port === 465,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+      await transporter.sendMail({ from, to: recipientEmail, subject, html });
+    } catch (err) {
+      console.error("[send-email] SMTP error:", err);
+      const message = err instanceof Error ? err.message : "Email delivery failed";
+      return NextResponse.json(
+        { error: `Could not send email: ${message}` },
+        { status: 502 }
+      );
+    }
+  } else if (provider === "ses") {
+    try {
+      const require = createRequire(import.meta.url);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nodemailer = require("nodemailer") as any;
+      const { SESClient, SendRawEmailCommand } = await import("@aws-sdk/client-ses");
 
-    const sesClient = new SESClient({
-      region: process.env.AWS_SES_REGION || process.env.AWS_REGION || "ap-south-1",
-    });
-    await sesClient.send(new SendRawEmailCommand({ RawMessage: { Data: rawMessage } }));
+      const streamTransport = nodemailer.createTransport({
+        streamTransport: true,
+        newline: "unix",
+      });
+      const mail = await streamTransport.sendMail({
+        from,
+        to: recipientEmail,
+        subject,
+        html,
+      });
+
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const stream = (mail as any).message;
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+        stream.on("end", () => resolve());
+        stream.on("error", reject);
+      });
+      const rawMessage = Buffer.concat(chunks);
+
+      const sesClient = new SESClient({
+        region: process.env.AWS_SES_REGION || process.env.AWS_REGION || "ap-south-1",
+      });
+      await sesClient.send(new SendRawEmailCommand({ RawMessage: { Data: rawMessage } }));
+    } catch (err) {
+      console.error("[send-email] SES error:", err);
+      const message = err instanceof Error ? err.message : "Email delivery failed";
+      return NextResponse.json(
+        { error: `Could not send email: ${message}` },
+        { status: 502 }
+      );
+    }
   } else {
     console.log(
       `\n[send-email] DEV MODE — would email link to ${recipientEmail}\n  ${downloadUrl}\n`

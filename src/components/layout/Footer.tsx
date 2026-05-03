@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 const footerServices = [
   { label: "Strategy", href: "/services/strategy" },
   { label: "Process Transformation", href: "/services/process-transformation" },
-  { label: "Agentic AI", href: "/services/agentic-ai" },
+  { label: "Agentic AI", href: "/agentic-ai" },
   { label: "Digital", href: "/services/digital" },
   { label: "Organisation Transformation", href: "/services/organisation-transformation" },
 ];

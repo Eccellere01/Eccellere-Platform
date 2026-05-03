@@ -481,7 +481,7 @@ export default function AssessmentPage() {
                         <Recommendation
                           title="Automate One Process End-to-End"
                           desc="Pick your highest-volume manual process and implement targeted automation."
-                          href="/services/agentic-ai"
+                          href="/agentic-ai"
                         />
                       </>
                     )}
@@ -490,7 +490,7 @@ export default function AssessmentPage() {
                         <Recommendation
                           title="Scale Your AI Operations"
                           desc="You're ahead of most MSMEs. Time to scale AI across departments and build internal capabilities."
-                          href="/services/agentic-ai"
+                          href="/agentic-ai"
                         />
                         <Recommendation
                           title="Consider Custom AI Development"

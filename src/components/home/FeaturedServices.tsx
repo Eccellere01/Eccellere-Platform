@@ -11,7 +11,7 @@ const services = [
       "AI strategy, implementation, and workforce enablement — purpose-built for MSMEs ready to leapfrog.",
     sectors: ["Manufacturing", "Retail", "Logistics"],
     featured: true,
-    href: "/services/agentic-ai",
+    href: "/agentic-ai",
   },
   {
     number: "02",
