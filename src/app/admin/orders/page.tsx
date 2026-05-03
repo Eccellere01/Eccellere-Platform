@@ -171,7 +171,7 @@ export default function AdminOrders() {
         {/* Error banner */}
         {error && (
           <div className="mb-4 rounded-md border border-eccellere-error/20 bg-eccellere-error/5 px-4 py-3 text-sm text-eccellere-error">
-            {error} â€”{" "}
+            {error} —{" "}
             <button className="underline" onClick={fetchOrders}>
               retry
             </button>

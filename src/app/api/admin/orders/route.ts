@@ -24,6 +24,7 @@ export async function GET() {
   try {
     orders = await Promise.race([
       prisma.order.findMany({
+        where: { status: { not: "PENDING" } },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -81,7 +82,7 @@ export async function GET() {
       client: clientName,
       email: o.user.email,
       asset: assetTitle,
-      amount: `₹${Math.floor(o.totalAmount / 100).toLocaleString("en-IN")}`,
+      amount: `₹${o.totalAmount.toLocaleString("en-IN")}`,
       status: o.status.toLowerCase(),
       payment,
       date: new Date(o.createdAt).toLocaleDateString("en-IN", {
