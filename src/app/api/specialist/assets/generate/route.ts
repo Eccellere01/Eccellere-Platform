@@ -29,7 +29,7 @@ Return ONLY a valid JSON object — no prose, no markdown fences — with these 
   "category": "one of: ${CATEGORIES.join(", ")}",
   "format": "one of: ${FORMATS.join(", ")}",
   "price": "integer INR. Bands: <15pp: 499-999; 20-40pp toolkit: 1499-2499; 40-80pp playbook: 2999-4999; 80+pp diagnostic: 5999-7999; learning-kit bundle: 7999-9999.",
-  "aboutResource": "2-4 sentences, 80-160 words. Pain -> Differentiation -> Outcome. Mention India, Rs. value, or Indian business context.",
+  "aboutResource": "2-4 sentences, 80-160 words. Pain -> Differentiation -> Outcome. When describing outcomes or benefits, express value as percentage improvement ranges (e.g. '15–25% reduction in procurement costs', '20–30% improvement in collections efficiency') rather than absolute rupee figures, since actual impact varies by organisation size, industry, and baseline performance. Mention India business context.",
   "whatIncluded": ["4-8 'Component name — descriptor' lines"],
   "contentsPreview": ["4-10 section/chapter names"],
   "targetAudience": "comma-separated specific roles",
