@@ -75,7 +75,7 @@ function DeleteModal({
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "OK"}
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Delete"}
           </Button>
         </div>
       </div>

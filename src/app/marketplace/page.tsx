@@ -8,7 +8,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { assets as staticAssets, type Asset } from "@/lib/marketplace-data";
+import { type Asset } from "@/lib/marketplace-data";
 import { AssetPreviewModal } from "@/components/marketplace/AssetPreviewModal";
 
 const categories = [
@@ -56,10 +56,8 @@ export default function MarketplacePage() {
 
   useEffect(() => { fetchDbAssets(); }, [fetchDbAssets]);
 
-  // DB assets take priority; supplement with static assets not already in DB
-  const allAssets: Asset[] = dbAssets.length > 0
-    ? [...dbAssets, ...staticAssets.filter((s) => !dbAssets.find((d) => d.slug === s.slug))]
-    : staticAssets;
+  // Only show real DB assets — no hardcoded samples
+  const allAssets: Asset[] = dbAssets;
 
   const filtered = allAssets.filter((a) => {
     const matchCategory = selectedCategory === "All" || a.category === selectedCategory;
@@ -255,8 +253,13 @@ export default function MarketplacePage() {
                     <div key={i} className="h-64 animate-pulse rounded bg-eccellere-ink/5" />
                   ))}
                 </div>
+              ) : sorted.length === 0 ? (
+                <div className="py-16 text-center text-sm text-ink-light">
+                  {allAssets.length === 0
+                    ? "No assets published yet. Check back soon."
+                    : "No assets match your current filters."}
+                </div>
               ) : (
-              <>
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {sorted.map((asset, i) => (
                   <motion.div
@@ -325,24 +328,6 @@ export default function MarketplacePage() {
                 ))}
               </div>
 
-              {sorted.length === 0 && (
-                <div className="py-20 text-center">
-                  <p className="text-lg text-ink-mid">No assets match your filters.</p>
-                  <button
-                    onClick={() => {
-                      setSelectedCategory("All");
-                      setSelectedSector("All Sectors");
-                      setSelectedFormat("All Formats");
-                      setSearchQuery("");
-                    }}
-                    className="mt-4 text-sm text-eccellere-gold hover:underline"
-                  >
-                    Clear all filters
-                  </button>
-                </div>
-              )}
-              </>
-              )}
             </div>
           </div>
         </section>
