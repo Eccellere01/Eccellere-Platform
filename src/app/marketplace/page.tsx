@@ -327,7 +327,7 @@ export default function MarketplacePage() {
                   </motion.div>
                 ))}
               </div>
-
+              )}
             </div>
           </div>
         </section>
