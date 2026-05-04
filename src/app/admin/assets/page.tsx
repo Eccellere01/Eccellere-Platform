@@ -71,7 +71,7 @@ function DeleteModal({
           <Button size="sm" variant="ghost" onClick={onCancel} disabled={loading}>Cancel</Button>
           <Button
             size="sm"
-            className="bg-eccellere-error text-white hover:bg-eccellere-error/90"
+            variant="destructive"
             onClick={onConfirm}
             disabled={loading}
           >

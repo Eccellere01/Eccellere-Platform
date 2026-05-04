@@ -78,6 +78,8 @@
   --color-ink-mid: #3A3935;
   --color-ink-light: #7A7870;
   --color-eccellere-teal: #0F6E56;
+  --color-eccellere-error: #EF4444;
+  --color-eccellere-info: #3B82F6;
 
   /* Fonts */
   --font-display: var(--font-cormorant);
