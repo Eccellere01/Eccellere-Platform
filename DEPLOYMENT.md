@@ -19,7 +19,9 @@ We use **Hostinger Git auto-deploy** as the only deployment path. Pushing to `ma
 
 ---
 
-## 2. Standard release flow
+## 2. Standard release flow — **100% via Git, no SSH**
+
+This is the *only* path you should use day-to-day.
 
 ```powershell
 # 1. From repo root
@@ -40,11 +42,52 @@ curl.exe -s -o NUL -w "marketplace: %{http_code}`n" https://eccellere.co.in/mark
 
 Expected: `200`, `200`. (`/admin/assets` returns `307` when unauthenticated — that's correct.)
 
-> **Don't** use the **Redeploy** button in the Hostinger panel unless a push genuinely failed. The button can re-trigger a build that wipes runtime config (see §5).
+### When to break glass with SSH
+
+SSH is **only** for diagnostics and recovery. Never use it as the primary deploy path.
+
+| Symptom | Action |
+|---|---|
+| No build started within 5 min of `git push` | hPanel → Git → **Deploy now** button (panel UI, not SSH) |
+| Build failed (red badge in panel) | SSH in, read `~/domains/eccellere.co.in/public_html/.builds/logs/<latest>/` to find the cause, fix in code, push again |
+| Site returns 500s after a successful build | Check `~/.../nodejs/console.log` for missing-env errors; if `.htaccess` was wiped, follow §5 recovery |
+| `.htaccess` lost its `SetEnv` lines | Follow §5 recovery |
+
+> **Don't** use the **Redeploy** button in the Hostinger panel unless a push genuinely failed. The button can re-trigger a build that wipes runtime config (see §6).
 
 ---
 
-## 3. Required environment variables
+## 3. Branching strategy (recommended)
+
+Bring back a staging environment so we never debug on production:
+
+| Branch | Deploys to | Purpose |
+|---|---|---|
+| `staging` | `staging.eccellere.co.in` (separate Hostinger Node.js app) | Pre-prod smoke test |
+| `master` | `eccellere.co.in` (live) | Customer-facing |
+
+**Workflow:**
+
+```
+feature/<name>  →  merge to staging  →  test on subdomain
+                →  merge to master   →  live
+```
+
+### One-time staging setup (when ready)
+
+1. In Hostinger: create a second Node.js app on subdomain `staging.eccellere.co.in`.
+2. Point its Git integration at branch `staging`.
+3. Use a **separate MySQL database** (e.g. `u911413127_eccellere_stg`) so staging tests can't corrupt prod data.
+4. Mirror the `SetEnv` block in the staging app's `.htaccess`, but with:
+   - `NEXTAUTH_URL=https://staging.eccellere.co.in`
+   - `NEXT_PUBLIC_APP_URL=https://staging.eccellere.co.in`
+   - Razorpay **test** keys, not live
+   - Its own `NEXTAUTH_SECRET`
+5. Add a `noindex` robots header on the staging app to keep it out of Google.
+
+---
+
+## 4. Required environment variables
 
 These are read by the running app. **All are required** — missing any one will cause 500s on DB- or auth-backed pages.
 
@@ -52,7 +95,7 @@ These are read by the running app. **All are required** — missing any one will
 |---|---|
 | `DATABASE_URL` | `mysql://u911413127_eccellere:<pwd>@127.0.0.1:3306/u911413127_eccellere` |
 | `NEXTAUTH_URL` | `https://eccellere.co.in` |
-| `NEXTAUTH_SECRET` | 48-byte base64 random (see §4 for generation) |
+| `NEXTAUTH_SECRET` | 48-byte base64 random (see §5 for generation) |
 | `RAZORPAY_KEY_ID` | `rzp_live_…` |
 | `RAZORPAY_KEY_SECRET` | live secret |
 | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | same as `RAZORPAY_KEY_ID` (client-side) |
@@ -80,7 +123,7 @@ The Hostinger panel's **Environment Variables** UI is just a writer for these li
 
 ---
 
-## 4. Recovering from an env-var wipe
+## 5. Recovering from an env-var wipe
 
 This happened on 2026-05-04: a panel/redeploy interaction wiped all `SetEnv` lines except SMTP, breaking every page.
 
@@ -128,7 +171,7 @@ curl.exe -s -o NUL -w "home:%{http_code} mkt:%{http_code}`n" https://eccellere.c
 
 ---
 
-## 5. Things that have broken us before — don't do these
+## 6. Things that have broken us before — don't do these
 
 | Action | Why not |
 |---|---|
@@ -140,7 +183,7 @@ curl.exe -s -o NUL -w "home:%{http_code} mkt:%{http_code}`n" https://eccellere.c
 
 ---
 
-## 6. Server quick reference
+## 7. Server quick reference
 
 ```bash
 # SSH
@@ -176,7 +219,7 @@ ls -lt ~/domains/eccellere.co.in/public_html/.builds/logs/ | head -3
 
 ---
 
-## 7. Post-deploy verification checklist
+## 8. Post-deploy verification checklist
 
 - [ ] `curl https://eccellere.co.in/` → 200
 - [ ] `curl https://eccellere.co.in/marketplace` → 200
@@ -187,7 +230,7 @@ ls -lt ~/domains/eccellere.co.in/public_html/.builds/logs/ | head -3
 
 ---
 
-## 8. Secrets hygiene
+## 9. Secrets hygiene
 
 - **Never** commit `.env.local` or any file containing real keys.
 - Local `.env.local` and the on-server `.htaccess` are the two sources of truth — keep them in sync via [.env.production.example](.env.production.example).
