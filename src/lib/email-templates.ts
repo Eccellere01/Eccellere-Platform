@@ -72,7 +72,7 @@ export function renderWelcomeEmail({ recipientName, assessmentUrl }: WelcomeEmai
   </div>
   <div style="${footer}">
     <p style="margin:0;">© 2026 Eccellere Consulting Pvt. Ltd. · Bengaluru, India</p>
-    <p style="margin:8px 0 0 0;"><a href="https://eccellere.in/unsubscribe" style="color:#7A7870;">Unsubscribe</a></p>
+    <p style="margin:8px 0 0 0;"><a href="https://eccellere.co.in/unsubscribe" style="color:#7A7870;">Unsubscribe</a></p>
   </div>
 </div>
 </body></html>`;
@@ -105,7 +105,7 @@ export function renderOrderConfirmation({
     <div style="text-align:center;margin:32px 0;">
       <a href="${sanitize(downloadUrl)}" style="${cta}">Download Now →</a>
     </div>
-    <p style="${paragraph}">Your download link is also available in your <a href="https://eccellere.in/dashboard" style="color:#B8913A;">Dashboard</a>.</p>
+    <p style="${paragraph}">Your download link is also available in your <a href="https://eccellere.co.in/dashboard" style="color:#B8913A;">Dashboard</a>.</p>
     <hr style="${divider}">
     <p style="font-size:12px;color:#7A7870;margin:0;">This is a receipt for your purchase. No further action is required.</p>
   </div>
@@ -145,7 +145,7 @@ export function renderAssessmentResults({
       <a href="${sanitize(reportUrl)}" style="${cta}">View Full Report →</a>
     </div>
     <hr style="${divider}">
-    <p style="${paragraph}">Want expert guidance? <a href="https://eccellere.in/contact" style="color:#B8913A;">Book a free consultation</a> with our team.</p>
+    <p style="${paragraph}">Want expert guidance? <a href="https://eccellere.co.in/contact" style="color:#B8913A;">Book a free consultation</a> with our team.</p>
   </div>
   <div style="${footer}">
     <p style="margin:0;">© 2026 Eccellere Consulting Pvt. Ltd. · Bengaluru, India</p>
@@ -179,12 +179,12 @@ export function renderNewsletter({ recipientName, articles }: NewsletterProps): 
     <p style="${paragraph}">Hi ${sanitize(recipientName)}, here's this week's collection of insights for growth-minded businesses:</p>
     ${articlesHtml}
     <div style="text-align:center;margin:24px 0;">
-      <a href="https://eccellere.in/perspectives" style="${cta}">Read More on Eccellere →</a>
+      <a href="https://eccellere.co.in/perspectives" style="${cta}">Read More on Eccellere →</a>
     </div>
   </div>
   <div style="${footer}">
     <p style="margin:0;">© 2026 Eccellere Consulting Pvt. Ltd. · Bengaluru, India</p>
-    <p style="margin:8px 0 0;"><a href="https://eccellere.in/unsubscribe" style="color:#7A7870;">Unsubscribe</a> · <a href="https://eccellere.in/preferences" style="color:#7A7870;">Email preferences</a></p>
+    <p style="margin:8px 0 0;"><a href="https://eccellere.co.in/unsubscribe" style="color:#7A7870;">Unsubscribe</a> · <a href="https://eccellere.co.in/preferences" style="color:#7A7870;">Email preferences</a></p>
   </div>
 </div>
 </body></html>`;

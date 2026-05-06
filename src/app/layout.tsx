@@ -34,12 +34,12 @@ const organizationJsonLd = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": "https://eccellere.in/#organization",
+      "@id": "https://eccellere.co.in/#organization",
       name: "Eccellere Consulting",
-      url: "https://eccellere.in",
+      url: "https://eccellere.co.in",
       logo: {
         "@type": "ImageObject",
-        url: "https://eccellere.in/logo.png",
+        url: "https://eccellere.co.in/logo.png",
       },
       description:
         "India's premier consulting platform for MSMEs and startups. Strategy, Process Transformation, Agentic AI, and 200+ business frameworks.",
@@ -54,17 +54,17 @@ const organizationJsonLd = {
     },
     {
       "@type": "WebSite",
-      "@id": "https://eccellere.in/#website",
-      url: "https://eccellere.in",
+      "@id": "https://eccellere.co.in/#website",
+      url: "https://eccellere.co.in",
       name: "Eccellere",
       description:
         "Strategy, AI & Consulting for India's MSMEs",
-      publisher: { "@id": "https://eccellere.in/#organization" },
+      publisher: { "@id": "https://eccellere.co.in/#organization" },
       potentialAction: {
         "@type": "SearchAction",
         target: {
           "@type": "EntryPoint",
-          urlTemplate: "https://eccellere.in/marketplace?q={search_term_string}",
+          urlTemplate: "https://eccellere.co.in/marketplace?q={search_term_string}",
         },
         "query-input": "required name=search_term_string",
       },
@@ -89,11 +89,11 @@ export const metadata: Metadata = {
     "business frameworks",
     "Eccellere",
   ],
-  metadataBase: new URL("https://eccellere.in"),
+  metadataBase: new URL("https://eccellere.co.in"),
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://eccellere.in",
+    url: "https://eccellere.co.in",
     siteName: "Eccellere Consulting",
     title: "Eccellere — Strategy, AI & Consulting for India's MSMEs",
     description:
@@ -108,6 +108,12 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+    other: {
+      "msvalidate.01": process.env.BING_SITE_VERIFICATION || "",
+    },
   },
 };
 

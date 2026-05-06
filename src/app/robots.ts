@@ -17,14 +17,16 @@ export default function robots(): MetadataRoute.Robots {
       },
       {
         userAgent: "GPTBot",
-        disallow: ["/"],
+        allow: ["/"],
+        disallow: ["/admin/", "/api/"],
       },
       {
         userAgent: "ChatGPT-User",
-        disallow: ["/"],
+        allow: ["/"],
+        disallow: ["/admin/", "/api/"],
       },
     ],
-    sitemap: "https://eccellere.in/sitemap.xml",
-    host: "https://eccellere.in",
+    sitemap: "https://eccellere.co.in/sitemap.xml",
+    host: "https://eccellere.co.in",
   };
 }

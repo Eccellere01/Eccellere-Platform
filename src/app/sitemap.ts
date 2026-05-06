@@ -2,7 +2,7 @@ import { MetadataRoute } from "next";
 import { assets as marketplaceAssets } from "@/lib/marketplace-data";
 import { articles as perspectives } from "@/lib/perspectives-data";
 
-const BASE_URL = "https://eccellere.in";
+const BASE_URL = "https://eccellere.co.in";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
