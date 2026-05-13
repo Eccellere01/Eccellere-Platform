@@ -7,9 +7,9 @@ import nodemailer from "nodemailer";
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || "contact@eccellere.co.in";
 const FROM_EMAIL = process.env.EMAIL_FROM || "contact@eccellere.co.in";
 
-let transporter: nodemailer.Transporter | null = null;
+let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
-function getTransporter(): nodemailer.Transporter | null {
+function getTransporter(): ReturnType<typeof nodemailer.createTransport> | null {
   if (transporter) return transporter;
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || 465);
