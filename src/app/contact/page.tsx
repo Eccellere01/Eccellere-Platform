@@ -85,7 +85,9 @@ export default function ContactPage() {
                     Email
                   </p>
                   <p className="mt-1 text-sm text-eccellere-ink">
-                    hello@eccellere.in
+                    <a href="mailto:contact@eccellere.co.in" className="hover:text-eccellere-gold">
+                      contact@eccellere.co.in
+                    </a>
                   </p>
                 </div>
                 <div>
@@ -93,7 +95,9 @@ export default function ContactPage() {
                     Phone
                   </p>
                   <p className="mt-1 text-sm text-eccellere-ink">
-                    +91 98000 00000
+                    <a href="tel:+919964694566" className="hover:text-eccellere-gold">
+                      +91 99646 94566
+                    </a>
                   </p>
                 </div>
                 <div>

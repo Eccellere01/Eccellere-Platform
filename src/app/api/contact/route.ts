@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyContactSubmission } from "@/lib/notify-admin";
 
 export async function POST(request: Request) {
   try {
@@ -16,6 +17,11 @@ export async function POST(request: Request) {
     const submission = await prisma.contactSubmission.create({
       data: { name, email, phone, company, sector, inquiryType, message },
     });
+
+    // Fire-and-forget admin email notification (never blocks the response)
+    notifyContactSubmission({ name, email, phone, company, sector, inquiryType, message }).catch(
+      (err) => console.error("[contact] notify failed:", err)
+    );
 
     return NextResponse.json(
       { message: "Thank you! We'll be in touch within 24 hours.", id: submission.id },

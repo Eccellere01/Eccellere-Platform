@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { notifyRegistration } from "@/lib/notify-admin";
 
 export async function POST(request: Request) {
   try {
@@ -134,6 +135,20 @@ export async function POST(request: Request) {
         createdAt: true,
       },
     });
+
+    // Fire-and-forget admin email notification (never blocks the response)
+    notifyRegistration({
+      name: user.name || name,
+      email: user.email,
+      phone: phone || null,
+      role: user.role === "SPECIALIST" ? "SPECIALIST" : "CLIENT",
+      company: profile?.companyName || profile?.organisation || null,
+      city: profile?.city || null,
+      state: profile?.state || null,
+      headline: profile?.currentRole
+        ? `${profile.currentRole}${profile.organisation ? ` at ${profile.organisation}` : ""}`
+        : null,
+    }).catch((err) => console.error("[register] notify failed:", err));
 
     return NextResponse.json(
       { message: "Account created successfully", user },

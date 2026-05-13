@@ -54,7 +54,7 @@ function generateResponse(input: string): string {
     return "The best way to get started with Eccellere:\n\n1. **Take the free AI Readiness Assessment** → /assessment\n2. **Browse the Marketplace** → /marketplace\n3. **Book a discovery call** → /contact\n\nMost clients start with the assessment — it gives a personalised score and recommendations in under 2 minutes.";
   }
   if (q.includes("contact") || q.includes("call") || q.includes("talk") || q.includes("speak")) {
-    return "You can reach the Eccellere team at:\n\n📧 hello@eccellere.in\n📞 +91 98000 00000\n📍 Bengaluru, India\n\nOr book a discovery call at /contact. We typically respond within 4 business hours.";
+    return "You can reach the Eccellere team at:\n\n📧 contact@eccellere.co.in\n📞 +91 99646 94566\n📍 Bengaluru, India\n\nOr book a discovery call at /contact. We typically respond within 4 business hours.";
   }
   if (q.includes("msme") || q.includes("small business") || q.includes("startup")) {
     return "Eccellere is purpose-built for India's 63 million MSMEs. We've designed every framework, pricing point, and engagement model for the realities of Indian businesses doing ₹1Cr–₹200Cr in revenue. Our MSME Hub at /msme-hub is a great starting point.";
@@ -63,7 +63,7 @@ function generateResponse(input: string): string {
     return "Hello! 👋 I'm Eccellere's AI advisor. I can help you explore our services, find the right framework for your business, or guide you to the right specialist.\n\nWhat's the biggest challenge your business is facing right now?";
   }
   if (q.includes("thank") || q.includes("thanks")) {
-    return "You're welcome! Have more questions anytime — I'm here to help. You can also reach our team at hello@eccellere.in or visit /contact to book a call.";
+    return "You're welcome! Have more questions anytime — I'm here to help. You can also reach our team at contact@eccellere.co.in or visit /contact to book a call.";
   }
 
   // Default

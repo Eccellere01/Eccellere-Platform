@@ -80,8 +80,8 @@ export function Footer() {
             Strategy, AI, and business frameworks for growth.
           </p>
           <div className="space-y-1 text-sm text-white/50">
-            <p>contact@eccellere.in</p>
-            <p>+91 9964694566</p>
+            <p>contact@eccellere.co.in</p>
+            <p>+91 99646 94566</p>
             <p>Bengaluru, India</p>
           </div>
           {/* Social icons */}
