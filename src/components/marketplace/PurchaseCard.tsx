@@ -106,6 +106,10 @@ export function PurchaseCard({ asset, discount }: PurchaseCardProps) {
           Preview Sample
         </Button>
 
+        <p className="mt-2 text-center text-[11px] italic text-ink-light">
+          Refresh the browser if preview not loaded
+        </p>
+
         <div className="mt-5 space-y-2.5 border-t border-eccellere-ink/5 pt-5 text-xs text-ink-mid">
           <div className="flex items-center gap-2">
             <Download className="h-3.5 w-3.5 text-eccellere-teal" />

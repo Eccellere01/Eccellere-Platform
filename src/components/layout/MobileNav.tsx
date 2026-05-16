@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,22 @@ interface MobileNavProps {
 export function MobileNav({ links, scrolled }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   return (
     <div className="lg:hidden">
@@ -34,8 +51,22 @@ export function MobileNav({ links, scrolled }: MobileNavProps) {
         {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
-      {open && (
-        <div className="fixed inset-0 top-[72px] z-40 overflow-y-auto bg-eccellere-ink/95 backdrop-blur-lg">
+      {mounted && open && createPortal(
+        <div
+          className="lg:hidden"
+          style={{
+            position: "fixed",
+            top: 72,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: "100vw",
+            height: "calc(100vh - 72px)",
+            backgroundColor: "#0E0E0D",
+            zIndex: 9999,
+            overflowY: "auto",
+          }}
+        >
           <nav className="flex flex-col gap-1 p-6 pb-8">
             {/* Highlighted first item */}
             <Button asChild className="mb-4 w-full">
@@ -111,7 +142,8 @@ export function MobileNav({ links, scrolled }: MobileNavProps) {
               </Button>
             </div>
           </nav>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
