@@ -35,8 +35,8 @@ export function MobileNav({ links, scrolled }: MobileNavProps) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 top-[72px] z-40 bg-eccellere-ink/95 backdrop-blur-lg">
-          <nav className="flex flex-col gap-1 p-6">
+        <div className="fixed inset-0 top-[72px] z-40 overflow-y-auto bg-eccellere-ink/95 backdrop-blur-lg">
+          <nav className="flex flex-col gap-1 p-6 pb-8">
             {/* Highlighted first item */}
             <Button asChild className="mb-4 w-full">
               <Link href="/assessment" onClick={() => setOpen(false)}>
