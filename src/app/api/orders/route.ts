@@ -1,59 +1,90 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import type { OrderStatus } from "@/generated/prisma/client";
 
-export type Order = {
+// API response shape consumed by future /account/orders UI (kept stable).
+export type OrderDTO = {
   id: string;
+  orderNumber: string;
   userId: string;
   assetSlug: string;
   assetTitle: string;
   assetFormat: string;
-  amount: number; // in paise
-  currency: "INR";
+  amount: number; // in paise — full order total
+  currency: string;
   status: "pending" | "paid" | "failed" | "refunded";
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   createdAt: string;
   updatedAt: string;
   downloadUrl?: string;
-  licenceType: "personal" | "business" | "enterprise";
+  licenceType: string;
+  items: Array<{
+    assetSlug: string;
+    assetTitle: string;
+    assetFormat: string;
+    unitPrice: number;
+    quantity: number;
+    downloadUrl?: string;
+  }>;
 };
 
-// In-memory store — replace with Prisma in production
-const orders: Order[] = [
-  {
-    id: "ORD-2041",
-    userId: "demo-user",
-    assetSlug: "msme-growth-strategy-playbook",
-    assetTitle: "MSME Growth Strategy Playbook",
-    assetFormat: "PDF",
-    amount: 249900,
-    currency: "INR",
-    status: "paid",
-    razorpayPaymentId: "pay_demo_001",
-    createdAt: "2026-04-10T09:00:00.000Z",
-    updatedAt: "2026-04-10T09:02:00.000Z",
-    downloadUrl: "/api/files/assets/msme-growth-strategy-playbook.pdf",
-    licenceType: "business",
-  },
-  {
-    id: "ORD-2038",
-    userId: "demo-user",
-    assetSlug: "ai-readiness-assessment-toolkit",
-    assetTitle: "AI Readiness Assessment Toolkit",
-    assetFormat: "Excel",
-    amount: 199900,
-    currency: "INR",
-    status: "paid",
-    razorpayPaymentId: "pay_demo_002",
-    createdAt: "2026-04-06T14:00:00.000Z",
-    updatedAt: "2026-04-06T14:01:30.000Z",
-    downloadUrl: "/api/files/assets/ai-readiness-assessment-toolkit.xlsx",
-    licenceType: "business",
-  },
-];
+// Map DB enum → public API status (lowercase) for stable client contract.
+function mapStatus(s: OrderStatus): OrderDTO["status"] {
+  switch (s) {
+    case "PAID":
+      return "paid";
+    case "FAILED":
+    case "CANCELLED":
+      return "failed";
+    case "REFUNDED":
+    case "PARTIALLY_REFUNDED":
+    case "REFUND_REQUESTED":
+      return "refunded";
+    default:
+      return "pending";
+  }
+}
 
-// ── GET /api/orders — list orders for authenticated user ─────────────────────
+// Accept lowercase ?status= query param, return DB enum or null if unknown.
+function parseStatusFilter(s: string | null): OrderStatus | null {
+  if (!s) return null;
+  switch (s.toLowerCase()) {
+    case "paid":
+      return "PAID";
+    case "pending":
+      return "PENDING";
+    case "failed":
+      return "FAILED";
+    case "refunded":
+      return "REFUNDED";
+    default:
+      return null;
+  }
+}
+
+function inferFormat(asset: { fileUrls?: unknown }): string {
+  // Best-effort: pick first file extension from fileUrls JSON, else fallback.
+  const files = asset.fileUrls;
+  if (Array.isArray(files) && files.length > 0 && typeof files[0] === "string") {
+    const ext = files[0].split(".").pop();
+    if (ext && ext.length <= 5) return ext.toUpperCase();
+  }
+  if (files && typeof files === "object") {
+    const values = Object.values(files as Record<string, unknown>);
+    for (const v of values) {
+      if (typeof v === "string") {
+        const ext = v.split(".").pop();
+        if (ext && ext.length <= 5) return ext.toUpperCase();
+      }
+    }
+  }
+  return "PDF";
+}
+
+// ── GET /api/orders — list orders for the authenticated user ─────────────────
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -61,78 +92,90 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
-  const limit = parseInt(searchParams.get("limit") ?? "20", 10);
-  const offset = parseInt(searchParams.get("offset") ?? "0", 10);
+  const statusFilter = parseStatusFilter(searchParams.get("status"));
+  const limit = Math.min(Math.max(parseInt(searchParams.get("limit") ?? "20", 10) || 20, 1), 100);
+  const offset = Math.max(parseInt(searchParams.get("offset") ?? "0", 10) || 0, 0);
 
-  // In production: filter by session.user.id via Prisma
-  let result = orders.filter((o) => o.userId === "demo-user");
-  if (status) {
-    result = result.filter((o) => o.status === status);
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!user) {
+    return NextResponse.json({ orders: [], total: 0, limit, offset });
   }
 
-  const total = result.length;
-  const paginated = result.slice(offset, offset + limit);
+  const where = {
+    userId: user.id,
+    ...(statusFilter ? { status: statusFilter } : {}),
+  };
 
-  return NextResponse.json({ orders: paginated, total, limit, offset });
+  const [total, rows] = await Promise.all([
+    prisma.order.count({ where }),
+    prisma.order.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: offset,
+      take: limit,
+      include: {
+        items: {
+          include: {
+            asset: {
+              select: { slug: true, title: true, fileUrls: true, licenceType: true },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const orders: OrderDTO[] = rows.map((o) => {
+    const first = o.items[0];
+    const firstAsset = first?.asset;
+    const firstFormat = firstAsset ? inferFormat(firstAsset) : "PDF";
+    return {
+      id: o.id,
+      orderNumber: o.orderNumber,
+      userId: o.userId,
+      assetSlug: firstAsset?.slug ?? "",
+      assetTitle: firstAsset?.title ?? "Order",
+      assetFormat: firstFormat,
+      amount: o.totalAmount,
+      currency: o.currency,
+      status: mapStatus(o.status),
+      razorpayOrderId: o.gatewayOrderId ?? undefined,
+      razorpayPaymentId: o.gatewayPaymentId ?? undefined,
+      createdAt: o.createdAt.toISOString(),
+      updatedAt: o.updatedAt.toISOString(),
+      downloadUrl: firstAsset?.slug
+        ? `/api/files/assets/${firstAsset.slug}.${firstFormat.toLowerCase()}`
+        : undefined,
+      licenceType: firstAsset?.licenceType ?? "single-use",
+      items: o.items.map((it) => ({
+        assetSlug: it.asset?.slug ?? "",
+        assetTitle: it.asset?.title ?? "",
+        assetFormat: it.asset ? inferFormat(it.asset) : "PDF",
+        unitPrice: it.unitPrice,
+        quantity: it.quantity,
+        downloadUrl: it.asset?.slug
+          ? `/api/files/assets/${it.asset.slug}.${inferFormat(it.asset).toLowerCase()}`
+          : undefined,
+      })),
+    };
+  });
+
+  return NextResponse.json({ orders, total, limit, offset });
 }
 
-// ── POST /api/orders — create a new order record (after payment verification) ─
-export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: {
-    assetSlug: string;
-    assetTitle: string;
-    assetFormat: string;
-    amount: number;
-    razorpayOrderId: string;
-    razorpayPaymentId: string;
-    licenceType?: "personal" | "business" | "enterprise";
-  };
-
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  // Validate required fields
-  const required = ["assetSlug", "assetTitle", "assetFormat", "amount", "razorpayOrderId", "razorpayPaymentId"];
-  for (const field of required) {
-    if (!body[field as keyof typeof body]) {
-      return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
-    }
-  }
-
-  if (typeof body.amount !== "number" || body.amount <= 0) {
-    return NextResponse.json({ error: "amount must be a positive integer (paise)" }, { status: 400 });
-  }
-
-  const id = `ORD-${Date.now().toString().slice(-6)}`;
-  const now = new Date().toISOString();
-
-  const newOrder: Order = {
-    id,
-    userId: session.user.email,
-    assetSlug: body.assetSlug,
-    assetTitle: body.assetTitle,
-    assetFormat: body.assetFormat,
-    amount: body.amount,
-    currency: "INR",
-    status: "paid",
-    razorpayOrderId: body.razorpayOrderId,
-    razorpayPaymentId: body.razorpayPaymentId,
-    licenceType: body.licenceType ?? "personal",
-    createdAt: now,
-    updatedAt: now,
-    downloadUrl: `/api/files/assets/${body.assetSlug}.${body.assetFormat.toLowerCase()}`,
-  };
-
-  orders.push(newOrder);
-
-  return NextResponse.json({ order: newOrder }, { status: 201 });
+// ── POST /api/orders ─────────────────────────────────────────────────────────
+// Order rows are now created server-side by the Razorpay webhook
+// (`/api/webhooks/razorpay`) and by the payment-verification flow in
+// `/api/payments` (PATCH → persistOrderToDb). This endpoint is retained
+// only to avoid breaking older clients and returns 410 Gone.
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: "Orders are created automatically after payment verification. Use /api/payments instead.",
+    },
+    { status: 410 }
+  );
 }
